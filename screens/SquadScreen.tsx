@@ -1,11 +1,13 @@
+
 import React, { useState } from 'react';
-import { Team, Player } from '../types';
-import { ArrowLeft, SortDesc, User, Shield, Target, Activity } from 'lucide-react';
+import { Team } from '../types';
+import { ArrowLeft, PencilLine, Zap, AlertCircle } from 'lucide-react';
 import clsx from 'clsx';
 
 interface Props {
   team: Team;
   onBack: () => void;
+  onRenew: (playerId: string) => void;
 }
 
 const POS_COLORS = {
@@ -17,7 +19,7 @@ const POS_COLORS = {
   'ATA': 'text-red-500 bg-red-500/10 border-red-500/20',
 };
 
-export default function SquadScreen({ team, onBack }: Props) {
+export default function SquadScreen({ team, onBack, onRenew }: Props) {
   const [filter, setFilter] = useState<'ALL' | 'GOL' | 'DEF' | 'MID' | 'ATT'>('ALL');
 
   const filteredPlayers = team.roster.filter(p => {
@@ -29,114 +31,61 @@ export default function SquadScreen({ team, onBack }: Props) {
     return true;
   });
 
-  const avgOverall = Math.round(team.roster.reduce((acc, p) => acc + p.overall, 0) / team.roster.length);
-  const avgAge = (team.roster.reduce((acc, p) => acc + p.age, 0) / team.roster.length).toFixed(1);
-
-  const getInitials = (name: string) => {
-    const parts = name.split(' ');
-    if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`;
-    return name.slice(0, 2).toUpperCase();
-  };
-
   return (
     <div className="flex flex-col h-screen bg-background text-white">
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-white/5">
-        <div className="flex items-center justify-between p-4 h-16">
-          <button onClick={onBack} className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-surface transition-colors">
-            <ArrowLeft className="text-white" size={20} />
+      <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-white/5 p-4 flex items-center justify-between">
+          <button onClick={onBack} className="w-10 h-10 rounded-full hover:bg-surface flex items-center justify-center">
+            <ArrowLeft size={20} />
           </button>
-          <h1 className="text-lg font-bold flex-1 text-center">Elenco</h1>
-          <button className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-surface transition-colors">
-            <SortDesc className="text-white" size={20} />
-          </button>
-        </div>
+          <h1 className="text-lg font-bold">Elenco Profissional</h1>
+          <div className="w-10"></div>
       </header>
 
-      {/* Stats Overview */}
-      <div className="px-4 py-4 grid grid-cols-3 gap-3">
-        <div className="flex flex-col items-center p-3 bg-surface rounded-xl border border-white/5">
-          <span className="text-2xl font-black text-white">{team.roster.length}</span>
-          <span className="text-[10px] font-bold text-secondary uppercase tracking-wide">Atletas</span>
-        </div>
-        <div className="flex flex-col items-center p-3 bg-surface rounded-xl border border-primary/20 shadow-[0_0_15px_-5px_rgba(59,130,246,0.3)]">
-          <span className="text-2xl font-black text-primary">{avgOverall}</span>
-          <span className="text-[10px] font-bold text-secondary uppercase tracking-wide">Média</span>
-        </div>
-        <div className="flex flex-col items-center p-3 bg-surface rounded-xl border border-white/5">
-          <span className="text-2xl font-black text-white">{avgAge}</span>
-          <span className="text-[10px] font-bold text-secondary uppercase tracking-wide">Idade</span>
-        </div>
-      </div>
-
-      {/* Filter Tabs */}
-      <div className="sticky top-16 z-30 bg-background pt-0 pb-4 px-4 overflow-x-auto no-scrollbar flex gap-2 border-b border-transparent">
-        {[
-          { id: 'ALL', label: 'Todos' },
-          { id: 'GOL', label: 'Goleiros' },
-          { id: 'DEF', label: 'Defesa' },
-          { id: 'MID', label: 'Meio' },
-          { id: 'ATT', label: 'Ataque' },
-        ].map((tab) => (
-          <button
-            key={tab.id}
-            onClick={() => setFilter(tab.id as any)}
-            className={clsx(
-              "px-4 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all active:scale-95",
-              filter === tab.id 
-                ? "bg-primary text-white shadow-lg shadow-primary/20" 
-                : "bg-surface text-secondary hover:text-white border border-white/5"
-            )}
-          >
-            {tab.label}
+      <div className="px-4 py-4 overflow-x-auto no-scrollbar flex gap-2">
+        {['ALL', 'GOL', 'DEF', 'MID', 'ATT'].map((tab) => (
+          <button key={tab} onClick={() => setFilter(tab as any)} className={clsx("px-4 py-2 rounded-full text-xs font-bold transition-all", filter === tab ? "bg-primary text-white" : "bg-surface text-secondary")}>
+            {tab === 'ALL' ? 'Todos' : tab}
           </button>
         ))}
       </div>
 
-      {/* List Header */}
-      <div className="flex items-center px-6 py-2 text-[10px] font-bold text-secondary uppercase tracking-wider">
-        <div className="w-10 text-center mr-3">Pos</div>
-        <div className="flex-1">Nome / Status</div>
-        <div className="w-10 text-center">OVR</div>
-      </div>
+      <div className="flex-1 overflow-y-auto px-4 pb-20 space-y-3 no-scrollbar">
+        {filteredPlayers.map((player) => (
+          <div key={player.id} className="bg-surface rounded-2xl p-4 border border-white/5 relative overflow-hidden">
+             {player.isSuspended && (
+                <div className="absolute top-0 right-0 p-2 bg-rose-600 text-[8px] font-black uppercase rounded-bl-lg flex items-center gap-1">
+                   <AlertCircle size={10} /> Suspenso
+                </div>
+             )}
+             
+             <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                   <div className={clsx("w-10 h-10 rounded-xl flex items-center justify-center border font-black text-xs", POS_COLORS[player.position])}>
+                      {player.position}
+                   </div>
+                   <div className="flex flex-col">
+                      <span className="text-sm font-bold">{player.name}</span>
+                      <span className="text-[10px] text-secondary">OVR {player.overall} • {player.age} anos • Pot. {player.potential}</span>
+                   </div>
+                </div>
+                <div className="flex flex-col items-end">
+                   <div className="flex items-center gap-1 text-[10px] font-black uppercase text-emerald-400">
+                      <Zap size={10} fill="currentColor" /> {player.energy}%
+                   </div>
+                   <span className="text-[9px] text-secondary uppercase font-bold">Contrato: {player.contractRounds} rod.</span>
+                </div>
+             </div>
 
-      {/* Players List */}
-      <div className="flex-1 overflow-y-auto px-4 pb-20 space-y-2 no-scrollbar">
-        {filteredPlayers.map((player, idx) => (
-          <div key={player.id} className="group flex items-center bg-surface hover:bg-surface/80 rounded-xl p-3 border border-white/5 transition-all active:scale-[0.99]">
-            {/* Position & Avatar */}
-            <div className="flex items-center gap-3 w-16 mr-2">
-              <div className={clsx("w-8 h-8 rounded-full flex items-center justify-center border font-bold text-[10px]", POS_COLORS[player.position])}>
-                 {getInitials(player.name)}
-              </div>
-              <span className="text-[10px] font-black text-secondary">{player.position}</span>
-            </div>
-
-            {/* Info */}
-            <div className="flex flex-1 flex-col justify-center overflow-hidden">
-              <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold text-white truncate">{player.name}</h3>
-                {player.status === 'fit' && <div className="w-2 h-2 rounded-full bg-emerald-500"></div>}
-                {player.status === 'injured' && <Activity size={12} className="text-red-500" />}
-              </div>
-              <div className="flex items-center gap-3 mt-1 text-xs text-secondary font-medium">
-                 {/* Fixed age display logic */}
-                 <span className="flex items-center gap-1">{player.age} anos</span>
-                 {player.evolution && player.evolution > 0 && (
-                    <span className="text-emerald-400 flex items-center gap-0.5">
-                       <Target size={10} /> +{player.evolution} Evo
-                    </span>
-                 )}
-              </div>
-            </div>
-
-            {/* Rating */}
-            <div className={clsx(
-               "flex items-center justify-center w-10 h-10 rounded-lg font-bold text-base transition-colors",
-               player.overall >= 80 ? "bg-primary text-white shadow-lg shadow-primary/20" : "bg-background text-white"
-            )}>
-              {player.overall}
-            </div>
+             <div className="flex items-center gap-2">
+                <div className="flex-1 h-1.5 bg-background rounded-full overflow-hidden">
+                   <div className={clsx("h-full transition-all", player.energy < 30 ? "bg-rose-500" : player.energy < 70 ? "bg-amber-500" : "bg-emerald-500")} style={{ width: `${player.energy}%` }}></div>
+                </div>
+                {player.contractRounds <= 5 && (
+                   <button onClick={() => onRenew(player.id)} className="bg-primary/20 text-primary px-3 py-1 rounded-lg text-[10px] font-black flex items-center gap-1">
+                      <PencilLine size={10} /> RENOVAR
+                   </button>
+                )}
+             </div>
           </div>
         ))}
       </div>

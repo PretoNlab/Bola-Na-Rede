@@ -1,7 +1,7 @@
 
-import React, { useState } from 'react';
-import { Team } from '../types';
-import { Play, Users, ArrowLeftRight, Wallet, LayoutDashboard, Trophy, Settings, Newspaper, Target, Globe, ChevronRight, UserRound, Flame, Award } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Team, NewsItem, TransferOffer } from '../types';
+import { Play, Users, ArrowLeftRight, Wallet, LayoutDashboard, Trophy, Settings, Newspaper, Target, Lock, Unlock, MessageSquare, Heart } from 'lucide-react';
 import clsx from 'clsx';
 
 interface Props {
@@ -11,6 +11,7 @@ interface Props {
   round: number;
   funds: number;
   onboardingComplete: boolean;
+  isWindowOpen: boolean;
   onCompleteOnboarding: () => void;
   onOpenSquad: () => void;
   onOpenMarket: () => void;
@@ -21,110 +22,157 @@ interface Props {
   onOpenSettings: () => void;
   onSimulate: () => void;
   onOpenTactics: () => void;
+  news?: NewsItem[];
+  offers?: TransferOffer[];
 }
 
 export default function DashboardScreen({ 
-  team, nextOpponent, standings, round, funds, onboardingComplete, onCompleteOnboarding,
+  team, nextOpponent, round, funds, isWindowOpen,
   onOpenSquad, onOpenMarket, onOpenFinance, onOpenCalendar, 
-  onOpenLeague, onOpenNews, onOpenSettings, onSimulate, onOpenTactics
+  onOpenLeague, onOpenNews, onOpenSettings, onSimulate, onOpenTactics,
+  news = [], offers = []
 }: Props) {
-  const [onboardingStep, setOnboardingStep] = useState(0);
+  
+  const fanReactions = useMemo(() => {
+    const reactions = [];
+    if (team.moral > 80) reactions.push("O clima no estádio está incrível! #RumoAoTitulo");
+    if (team.moral < 40) reactions.push("O time está sem alma em campo... Alguém faça algo!");
+    if (funds < 0) reactions.push("Onde está o dinheiro da diretoria? #CriseFinanceira");
+    if (team.won > 0) reactions.push("A última vitória deu esperança para a massa!");
+    if (team.division === 2) reactions.push("Série B não é nosso lugar, vamos subir!");
+    reactions.push("O próximo jogo contra o " + nextOpponent.shortName + " vai ser pedreira.");
+    return reactions;
+  }, [team, nextOpponent, funds]);
 
-  const onboardingMessages = [
-    { title: "Bem-vindo, Professor!", text: `Sua missão no ${team.name} começa agora. A cidade espera por títulos!`, highlight: null },
-    { title: "Ranking Mundial", text: "Ao vencer jogos, você ganha Prestígio para subir no Hall da Fama Global.", highlight: "online" }
-  ];
+  const [currentReactionIdx, setCurrentReactionIdx] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentReactionIdx(prev => (prev + 1) % fanReactions.length);
+    }, 4000);
+    return () => clearInterval(timer);
+  }, [fanReactions]);
+
+  const unreadNewsCount = useMemo(() => news.filter(n => !n.isRead || n.choices).length, [news]);
 
   return (
     <div className="flex flex-col h-screen bg-background text-white relative">
-      {!onboardingComplete && (
-        <div className="absolute inset-0 z-[100] flex flex-col justify-end p-6">
-           <div className="absolute inset-0 bg-background/80 backdrop-blur-sm"></div>
-           <div className="relative bg-surface border border-white/10 rounded-[32px] p-6 shadow-2xl animate-in slide-in-from-bottom">
-              <div className="flex items-center gap-4 mb-4">
-                 <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center text-primary">
-                    <UserRound size={24} />
-                 </div>
-                 <h3 className="text-xl font-black">{onboardingMessages[onboardingStep].title}</h3>
-              </div>
-              <p className="text-sm text-secondary leading-relaxed mb-6">{onboardingMessages[onboardingStep].text}</p>
-              <button onClick={() => onboardingStep < onboardingMessages.length - 1 ? setOnboardingStep(s => s + 1) : onCompleteOnboarding()} className="w-full bg-primary py-4 rounded-2xl font-black uppercase text-xs">Continuar</button>
-           </div>
-        </div>
-      )}
-
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-white/5 p-4 flex items-center justify-between">
          <div className="flex items-center gap-3">
-            <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${team.logoColor1} ${team.logoColor2} flex items-center justify-center shadow-lg`}>
+            <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${team.logoColor1} ${team.logoColor2} flex items-center justify-center shadow-lg border border-white/10`}>
                <span className="text-[10px] font-black">{team.shortName}</span>
             </div>
             <div>
-               <h1 className="text-sm font-bold">{team.name}</h1>
-               <div className="flex items-center gap-1.5">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></div>
-                  <span className="text-[9px] font-black uppercase text-emerald-500">Ranking: #{Math.floor(Math.random() * 500) + 100}</span>
-               </div>
+               <h1 className="text-sm font-bold leading-none mb-1">{team.name}</h1>
+               <span className={`text-[9px] font-black uppercase flex items-center gap-1 ${isWindowOpen ? 'text-emerald-500' : 'text-rose-500'}`}>
+                  {isWindowOpen ? <Unlock size={8} /> : <Lock size={8} />}
+                  Janela {isWindowOpen ? 'Aberta' : 'Fechada'}
+               </span>
             </div>
          </div>
-         <button onClick={onSimulate} className="bg-primary px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2">
-            <Play size={14} fill="currentColor" /> Simular
-         </button>
+         <div className="flex items-center gap-2">
+            <button onClick={onSimulate} className="bg-primary px-5 py-2.5 rounded-xl text-xs font-black flex items-center gap-2 shadow-xl shadow-primary/20 active:scale-95 transition-all">
+               <Play size={14} fill="currentColor" /> JOGAR
+            </button>
+         </div>
       </header>
 
-      <main className="flex-1 overflow-y-auto p-4 space-y-6 pb-24 no-scrollbar">
-         {/* Prestige Status */}
-         <div className="bg-surface/50 border border-white/5 rounded-2xl p-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-               <Award size={24} className="text-yellow-500" />
-               <div>
-                  <p className="text-[10px] text-secondary font-bold uppercase">Prestígio do Técnico</p>
-                  <p className="text-sm font-black text-white">{team.prestige || 1200} pts</p>
+      <main className="flex-1 overflow-y-auto p-4 space-y-4 pb-24 no-scrollbar">
+         {/* Fan Reaction Ticker */}
+         <div className="bg-surface/50 border border-white/5 p-3 rounded-2xl flex items-center gap-3 overflow-hidden">
+            <div className="bg-primary/20 p-2 rounded-lg text-primary shrink-0">
+               <MessageSquare size={16} />
+            </div>
+            <p className="text-[10px] font-bold text-secondary italic animate-in fade-in slide-in-from-right duration-500 truncate" key={currentReactionIdx}>
+               "{fanReactions[currentReactionIdx]}"
+            </p>
+         </div>
+
+         {/* Stats Row */}
+         <div className="grid grid-cols-2 gap-3">
+            <div className="bg-surface border border-white/5 rounded-2xl p-4 flex flex-col gap-1 shadow-inner">
+               <p className="text-[8px] font-black text-secondary uppercase tracking-widest">Saldo Atual</p>
+               <p className={clsx("text-lg font-black", funds < 0 ? "text-rose-500" : "text-emerald-400")}>R$ {(funds/1000).toFixed(0)}k</p>
+            </div>
+            <div className="bg-surface border border-white/5 rounded-2xl p-4 flex flex-col gap-1 shadow-inner">
+               <p className="text-[8px] font-black text-secondary uppercase tracking-widest">Confiança</p>
+               <div className="flex items-center gap-2">
+                  <Heart size={14} className={clsx(team.moral > 70 ? "text-primary" : "text-rose-500")} fill="currentColor" />
+                  <p className="text-lg font-black">{team.moral}%</p>
                </div>
             </div>
-            <button onClick={onOpenLeague} className="text-[10px] font-black text-primary uppercase flex items-center gap-1">HALL DA FAMA <ChevronRight size={10} /></button>
          </div>
 
-         {/* Next Match */}
-         <div className="bg-surface border border-white/5 rounded-3xl p-6 flex items-center justify-between shadow-xl relative overflow-hidden">
-            <div className={`absolute top-0 left-0 w-full h-1 bg-gradient-to-r ${team.logoColor1} to-transparent`}></div>
-            <div className="flex flex-col items-center flex-1">
-               <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${team.logoColor1} ${team.logoColor2} mb-2`}></div>
-               <span className="text-xs font-bold">{team.shortName}</span>
+         {/* Next Match Focus */}
+         <div className="bg-gradient-to-br from-surface to-background border border-white/10 rounded-[32px] p-6 shadow-2xl relative overflow-hidden group">
+            <div className="absolute -right-4 -top-4 w-24 h-24 bg-primary/10 blur-3xl rounded-full group-hover:bg-primary/20 transition-all"></div>
+            <div className="flex justify-between items-center mb-6">
+               <span className="text-[10px] font-black text-secondary uppercase tracking-widest">Rodada {round}</span>
+               <div className="px-2 py-1 bg-primary/10 rounded-lg text-[8px] font-black text-primary uppercase">Mando de Campo</div>
             </div>
-            <span className="text-2xl font-black text-white/10 italic">VS</span>
-            <div className="flex flex-col items-center flex-1">
-               <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${nextOpponent.logoColor1} ${nextOpponent.logoColor2} mb-2`}></div>
-               <span className="text-xs font-bold">{nextOpponent.shortName}</span>
+            <div className="flex items-center justify-around">
+               <div className="flex flex-col items-center">
+                  <div className={`w-16 h-16 rounded-full bg-gradient-to-br ${team.logoColor1} ${team.logoColor2} flex items-center justify-center font-black shadow-2xl border-4 border-white/5 mb-3`}>
+                     {team.shortName}
+                  </div>
+                  <span className="text-[10px] font-black uppercase text-center">{team.name}</span>
+               </div>
+               <div className="flex flex-col items-center">
+                  <span className="text-2xl font-black italic text-white/10">VS</span>
+               </div>
+               <div className="flex flex-col items-center">
+                  <div className={`w-16 h-16 rounded-full bg-gradient-to-br ${nextOpponent.logoColor1} ${nextOpponent.logoColor2} flex items-center justify-center font-black shadow-2xl border-4 border-white/5 mb-3 opacity-60`}>
+                     {nextOpponent.shortName}
+                  </div>
+                  <span className="text-[10px] font-black uppercase text-center">{nextOpponent.name}</span>
+               </div>
             </div>
          </div>
 
-         {/* Management Grid */}
+         {/* Grid Options */}
          <div className="grid grid-cols-2 gap-3">
-            <button onClick={onOpenTactics} className="bg-surface border border-white/5 p-4 rounded-2xl flex flex-col gap-2">
-               <Target className="text-primary" size={20} />
-               <span className="text-sm font-bold">Tática</span>
+            <button onClick={onOpenTactics} className="bg-surface/80 border border-white/5 p-5 rounded-3xl flex flex-col gap-3 group active:scale-95 transition-all">
+               <Target className="text-primary group-hover:rotate-45 transition-transform" size={24} />
+               <span className="text-sm font-black uppercase tracking-tighter">Tática</span>
             </button>
-            <button onClick={onOpenSquad} className="bg-surface border border-white/5 p-4 rounded-2xl flex flex-col gap-2">
-               <Users className="text-blue-400" size={20} />
-               <span className="text-sm font-bold">Elenco</span>
+            <button onClick={onOpenSquad} className="bg-surface/80 border border-white/5 p-5 rounded-3xl flex flex-col gap-3 group active:scale-95 transition-all">
+               <Users className="text-blue-400 group-hover:scale-110 transition-transform" size={24} />
+               <span className="text-sm font-black uppercase tracking-tighter">Elenco</span>
             </button>
-            <button onClick={onOpenMarket} className="bg-surface border border-white/5 p-4 rounded-2xl flex flex-col gap-2">
-               <ArrowLeftRight className="text-emerald-400" size={20} />
-               <span className="text-sm font-bold">Mercado</span>
+            <button onClick={onOpenMarket} className="bg-surface/80 border border-white/5 p-5 rounded-3xl flex flex-col gap-3 group active:scale-95 transition-all relative">
+               <ArrowLeftRight className={clsx("transition-all", isWindowOpen ? "text-emerald-400" : "text-rose-500")} size={24} />
+               <span className="text-sm font-black uppercase tracking-tighter">Mercado</span>
+               {offers.length > 0 && <div className="absolute top-4 right-4 w-2 h-2 bg-rose-500 rounded-full animate-ping"></div>}
             </button>
-            <button onClick={onOpenFinance} className="bg-surface border border-white/5 p-4 rounded-2xl flex flex-col gap-2">
-               <Wallet className="text-amber-400" size={20} />
-               <span className="text-sm font-bold">Finanças</span>
+            <button onClick={onOpenFinance} className="bg-surface/80 border border-white/5 p-5 rounded-3xl flex flex-col gap-3 group active:scale-95 transition-all">
+               <Wallet className="text-amber-400 group-hover:translate-y-[-2px] transition-transform" size={24} />
+               <span className="text-sm font-black uppercase tracking-tighter">Finanças</span>
             </button>
          </div>
       </main>
 
-      <nav className="fixed bottom-0 left-0 w-full bg-surface/95 backdrop-blur-md border-t border-white/5 h-16 flex justify-around items-center px-4">
-         <button className="flex flex-col items-center text-primary"><LayoutDashboard size={20} /><span className="text-[9px] font-bold">Início</span></button>
-         <button onClick={onOpenTactics} className="flex flex-col items-center text-secondary"><Target size={20} /><span className="text-[9px] font-bold">Tática</span></button>
-         <button onClick={onOpenLeague} className="flex flex-col items-center text-secondary"><Trophy size={20} /><span className="text-[9px] font-bold">Liga</span></button>
-         <button onClick={onOpenNews} className="flex flex-col items-center text-secondary"><Newspaper size={20} /><span className="text-[9px] font-bold">News</span></button>
-         <button onClick={onOpenSettings} className="flex flex-col items-center text-secondary"><Settings size={20} /><span className="text-[9px] font-bold">Ajustes</span></button>
+      <nav className="fixed bottom-0 left-0 w-full bg-surface/90 backdrop-blur-xl border-t border-white/5 h-20 flex justify-around items-center px-6 pb-safe z-50">
+         <button onClick={() => {}} className="flex flex-col items-center gap-1 text-primary">
+            <LayoutDashboard size={20} />
+            <span className="text-[9px] font-black uppercase">Home</span>
+         </button>
+         <button onClick={onOpenLeague} className="flex flex-col items-center gap-1 text-secondary">
+            <Trophy size={20} />
+            <span className="text-[9px] font-black uppercase">Liga</span>
+         </button>
+         <button onClick={onOpenNews} className="flex flex-col items-center gap-1 text-secondary relative">
+            <Newspaper size={20} />
+            <span className="text-[9px] font-black uppercase">Notícias</span>
+            {unreadNewsCount > 0 && (
+               <div className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-rose-500 text-[8px] font-black text-white">
+                  {unreadNewsCount}
+               </div>
+            )}
+         </button>
+         <button onClick={onOpenSettings} className="flex flex-col items-center gap-1 text-secondary">
+            <Settings size={20} />
+            <span className="text-[9px] font-black uppercase">Ajustes</span>
+         </button>
       </nav>
     </div>
   );

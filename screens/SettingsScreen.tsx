@@ -1,36 +1,54 @@
-import React, { useState } from 'react';
-import { ArrowLeft, Trash2, Volume2, Info, Save, Database, Cloud, LogIn, LogOut, Check } from 'lucide-react';
-import { supabase, isSupabaseConfigured } from '../supabaseClient';
+
+import React, { useState, useEffect } from 'react';
+import { ArrowLeft, Trash2, Save, Database, Cloud, LogIn, LogOut, Check, Download, Info, Activity } from 'lucide-react';
+import { supabase, isSupabaseConfigured, testSupabaseConnection } from '../supabaseClient';
 import toast from 'react-hot-toast';
+// Added missing import for clsx
+import clsx from 'clsx';
 
 interface Props {
   onBack: () => void;
   onSave: () => void;
   onReset: () => void;
+  onLoadCloud: () => void;
   session: any;
 }
 
-export default function SettingsScreen({ onBack, onSave, onReset, session }: Props) {
+export default function SettingsScreen({ onBack, onSave, onReset, session, onLoadCloud }: Props) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
+  const [dbStatus, setDbStatus] = useState<{ checked: boolean; ok: boolean; msg: string }>({ checked: false, ok: false, msg: '' });
+
+  useEffect(() => {
+    checkDB();
+  }, []);
+
+  const checkDB = async () => {
+    const res = await testSupabaseConnection();
+    setDbStatus({ checked: true, ok: res.success, msg: res.message });
+  };
 
   const handleReset = () => {
-     if (window.confirm("Tem certeza? Todo o seu progresso será perdido permanentemente.")) {
+     if (window.confirm("Tem certeza? Todo o seu progresso local será perdido permanentemente.")) {
         onReset();
      }
   };
 
   const handleLogin = async () => {
      if (!isSupabaseConfigured()) {
-        toast.error("Configure as chaves do Supabase no código primeiro.");
+        toast.error("Supabase não configurado.");
+        return;
+     }
+     if (!email || !password) {
+        toast.error("Preencha e-mail e senha.");
         return;
      }
      setLoading(true);
      const { error } = await supabase.auth.signInWithPassword({ email, password });
      if (error) {
-        toast.error(error.message);
+        toast.error("Erro no Login: " + error.message);
      } else {
         toast.success("Login realizado com sucesso!");
         setShowLogin(false);
@@ -40,15 +58,19 @@ export default function SettingsScreen({ onBack, onSave, onReset, session }: Pro
 
   const handleSignUp = async () => {
      if (!isSupabaseConfigured()) {
-        toast.error("Configure as chaves do Supabase no código primeiro.");
+        toast.error("Supabase não configurado.");
+        return;
+     }
+     if (!email || !password || password.length < 6) {
+        toast.error("A senha deve ter pelo menos 6 caracteres.");
         return;
      }
      setLoading(true);
      const { error } = await supabase.auth.signUp({ email, password });
      if (error) {
-        toast.error(error.message);
+        toast.error("Erro no Cadastro: " + error.message);
      } else {
-        toast.success("Conta criada! Verifique seu email se necessário.");
+        toast.success("Conta criada! VERIFIQUE SEU E-MAIL para confirmar antes de logar.");
      }
      setLoading(false);
   };
@@ -70,8 +92,23 @@ export default function SettingsScreen({ onBack, onSave, onReset, session }: Pro
         </div>
       </header>
 
-      <main className="p-4 space-y-6 overflow-y-auto pb-safe">
+      <main className="p-4 space-y-6 overflow-y-auto pb-safe no-scrollbar">
          
+         {/* Database Status Info */}
+         <div className={clsx(
+            "p-3 rounded-xl border flex items-center gap-3 transition-all",
+            dbStatus.checked ? (dbStatus.ok ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-500" : "bg-rose-500/10 border-rose-500/20 text-rose-500") : "bg-surface border-white/5"
+         )}>
+            <Activity size={18} className={!dbStatus.checked ? "animate-pulse" : ""} />
+            <div className="flex flex-col">
+               <span className="text-[10px] font-black uppercase">Status do Banco de Dados</span>
+               <span className="text-[9px] font-bold opacity-80">{dbStatus.checked ? dbStatus.msg : "Verificando..."}</span>
+            </div>
+            {!dbStatus.ok && dbStatus.checked && (
+                <button onClick={checkDB} className="ml-auto bg-rose-500 text-white text-[8px] font-black px-2 py-1 rounded">RETESTAR</button>
+            )}
+         </div>
+
          {/* Cloud Sync Section */}
          <section className="space-y-3">
              <h2 className="text-xs font-bold uppercase tracking-wider text-secondary px-1">Bolanarede ID (Nuvem)</h2>
@@ -86,7 +123,7 @@ export default function SettingsScreen({ onBack, onSave, onReset, session }: Pro
                                 </div>
                                 <div>
                                     <h3 className="font-bold text-sm">Sincronizar Progresso</h3>
-                                    <p className="text-[10px] text-secondary">Jogue em qualquer dispositivo sem perder nada.</p>
+                                    <p className="text-[10px] text-secondary">Acesse seu save em qualquer lugar.</p>
                                 </div>
                             </div>
                             <button 
@@ -113,44 +150,65 @@ export default function SettingsScreen({ onBack, onSave, onReset, session }: Pro
                                 onChange={e => setPassword(e.target.value)}
                                 className="w-full bg-background border border-white/10 rounded-lg p-3 text-sm focus:border-primary outline-none transition-colors"
                             />
+                            
                             <div className="flex gap-2 mt-2">
                                 <button 
                                     onClick={handleLogin}
                                     disabled={loading}
-                                    className="flex-1 py-2.5 bg-primary text-white font-bold rounded-lg text-sm disabled:opacity-50"
+                                    className="flex-1 py-3 bg-primary text-white font-bold rounded-lg text-xs disabled:opacity-50"
                                 >
-                                    {loading ? '...' : 'Entrar'}
+                                    {loading ? 'Entrando...' : 'Entrar'}
                                 </button>
                                 <button 
                                     onClick={handleSignUp}
                                     disabled={loading}
-                                    className="flex-1 py-2.5 bg-surface border border-white/10 text-white font-bold rounded-lg text-sm hover:bg-white/5"
+                                    className="flex-1 py-3 bg-surface border border-white/10 text-white font-bold rounded-lg text-xs hover:bg-white/5"
                                 >
                                     Criar Conta
                                 </button>
                             </div>
-                            <button onClick={() => setShowLogin(false)} className="text-xs text-secondary text-center mt-2 underline">Cancelar</button>
+
+                            <div className="flex items-start gap-2 bg-blue-500/5 p-3 rounded-lg border border-blue-500/10 mt-2">
+                               <Info size={14} className="text-blue-400 shrink-0 mt-0.5" />
+                               <p className="text-[9px] text-blue-300 leading-tight">Ao criar conta, enviaremos um e-mail de confirmação. Você <b>precisa</b> clicar no link antes de fazer login.</p>
+                            </div>
+
+                            <button onClick={() => setShowLogin(false)} className="text-[10px] text-secondary text-center mt-2 underline">Voltar</button>
                         </div>
                     )}
                  </div>
              ) : (
-                 <div className="bg-surface rounded-xl border border-white/5 overflow-hidden p-4">
-                    <div className="flex items-center justify-between mb-4">
+                 <div className="bg-surface rounded-xl border border-white/5 overflow-hidden p-4 space-y-4">
+                    <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                             <div className="p-2 bg-emerald-500/10 rounded-lg">
                                 <Check size={24} className="text-emerald-500" />
                             </div>
                             <div>
-                                <h3 className="font-bold text-sm text-emerald-400">Conectado</h3>
+                                <h3 className="font-bold text-sm text-emerald-400">Sessão Ativa</h3>
                                 <p className="text-[10px] text-secondary truncate max-w-[150px]">{session.user.email}</p>
                             </div>
                         </div>
-                        <button onClick={handleLogout} className="p-2 bg-white/5 rounded-full hover:bg-white/10">
+                        <button onClick={handleLogout} className="p-2 bg-white/5 rounded-full hover:bg-white/10 transition-colors">
                             <LogOut size={16} className="text-rose-400" />
                         </button>
                     </div>
-                    <div className="bg-background/50 p-2 rounded text-[10px] text-secondary text-center">
-                        Seu jogo está sendo salvo na nuvem automaticamente.
+
+                    <div className="grid grid-cols-2 gap-2">
+                       <button 
+                          onClick={onLoadCloud}
+                          className="flex items-center justify-center gap-2 py-3 bg-white/5 border border-white/10 rounded-xl text-[10px] font-black hover:bg-white/10 active:scale-95 transition-all"
+                       >
+                          <Download size={14} className="text-primary" />
+                          BAIXAR SAVE
+                       </button>
+                       <button 
+                          onClick={onSave}
+                          className="flex items-center justify-center gap-2 py-3 bg-primary/10 border border-primary/20 rounded-xl text-[10px] font-black text-primary hover:bg-primary/20 active:scale-95 transition-all"
+                       >
+                          <Cloud size={14} />
+                          SUBIR SAVE
+                       </button>
                     </div>
                  </div>
              )}
@@ -160,14 +218,14 @@ export default function SettingsScreen({ onBack, onSave, onReset, session }: Pro
             <h2 className="text-xs font-bold uppercase tracking-wider text-secondary px-1">Dados Locais</h2>
             <div className="bg-surface rounded-xl border border-white/5 overflow-hidden">
                <button 
-                  onClick={onSave}
+                  onClick={() => { onSave(); toast.success("Progresso salvo localmente!"); }}
                   className="w-full flex items-center justify-between p-4 border-b border-white/5 hover:bg-white/5 transition-colors active:bg-white/10"
                >
                   <div className="flex items-center gap-3">
                      <Save size={20} className="text-emerald-500" />
                      <div className="flex flex-col items-start">
-                        <span className="text-sm font-bold text-emerald-500">Forçar Save {session ? '(Nuvem + Local)' : '(Local)'}</span>
-                        <span className="text-[10px] text-secondary">Última atualização: Automática</span>
+                        <span className="text-sm font-bold text-emerald-500">Forçar Save Manual</span>
+                        <span className="text-[10px] text-secondary">Salva no Cache do Navegador</span>
                      </div>
                   </div>
                </button>
@@ -175,9 +233,9 @@ export default function SettingsScreen({ onBack, onSave, onReset, session }: Pro
                <div className="flex items-start gap-3 p-4 bg-background/50">
                   <Database size={20} className="text-secondary shrink-0 mt-0.5" />
                   <div className="flex flex-col">
-                     <span className="text-xs font-bold text-white mb-1">Backup</span>
+                     <span className="text-xs font-bold text-white mb-1">Armazenamento em Cache</span>
                      <p className="text-[10px] text-secondary leading-relaxed">
-                        O jogo prioriza o save local para performance, mas sincroniza com a nuvem quando possível se você estiver logado.
+                        Seus dados são salvos localmente. Use a Nuvem para evitar perda de dados se limpar o histórico do navegador.
                      </p>
                   </div>
                </div>
@@ -188,11 +246,11 @@ export default function SettingsScreen({ onBack, onSave, onReset, session }: Pro
             <h2 className="text-xs font-bold uppercase tracking-wider text-secondary px-1">Zona de Perigo</h2>
             <button 
                onClick={handleReset}
-               className="w-full flex items-center justify-between p-4 bg-rose-500/10 hover:bg-rose-500/20 rounded-xl border border-rose-500/20 active:scale-[0.98] transition-all"
+               className="w-full flex items-center justify-between p-4 bg-rose-500/10 hover:bg-rose-500/20 rounded-xl border border-rose-500/20 active:scale-[0.98] transition-all shadow-lg"
             >
                <div className="flex items-center gap-3">
                   <Trash2 size={20} className="text-rose-500" />
-                  <span className="text-sm font-bold text-rose-500">Apagar Save e Reiniciar</span>
+                  <span className="text-sm font-bold text-rose-500 uppercase">Reiniciar Toda a Carreira</span>
                </div>
             </button>
          </section>

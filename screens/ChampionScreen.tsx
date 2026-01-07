@@ -1,6 +1,7 @@
+
 import React from 'react';
 import { Team } from '../types';
-import { Trophy, ArrowRight, RotateCcw } from 'lucide-react';
+import { Trophy, RotateCcw, TrendingUp, TrendingDown, ArrowUpCircle, ArrowDownCircle } from 'lucide-react';
 import clsx from 'clsx';
 
 interface Props {
@@ -8,66 +9,93 @@ interface Props {
   userTeam: Team;
   onNewSeason: () => void;
   onQuit: () => void;
+  teams: Team[];
 }
 
-export default function ChampionScreen({ champion, userTeam, onNewSeason, onQuit }: Props) {
+export default function ChampionScreen({ champion, userTeam, onNewSeason, onQuit, teams }: Props) {
   const isUserChampion = champion.id === userTeam.id;
+
+  const standingsA = [...teams].filter(t => t.division === 1).sort((a,b) => b.points - a.points || (b.gf-b.ga) - (a.gf-a.ga));
+  const standingsB = [...teams].filter(t => t.division === 2).sort((a,b) => b.points - a.points || (b.gf-b.ga) - (a.gf-a.ga));
+
+  const relegated = standingsA.slice(-2);
+  const promoted = standingsB.slice(0, 2);
 
   return (
     <div className="relative flex flex-col h-screen w-full bg-background overflow-hidden">
-      
-      {/* Background Effect */}
       <div className={clsx(
          "absolute inset-0 bg-gradient-to-b opacity-40 z-0",
-         isUserChampion ? "from-yellow-500/20 via-background to-background" : "from-background via-background to-background"
+         isUserChampion ? "from-yellow-500/20 via-background to-background" : "from-blue-500/20 via-background to-background"
       )}></div>
 
-      <main className="relative z-10 flex-1 flex flex-col items-center justify-center p-6 text-center">
-         
-         <div className="mb-8 animate-bounce">
-            <Trophy size={80} className={isUserChampion ? "text-yellow-400 drop-shadow-[0_0_20px_rgba(250,204,21,0.5)]" : "text-secondary"} />
+      <main className="relative z-10 flex-1 flex flex-col items-center p-6 text-center overflow-y-auto no-scrollbar">
+         <div className="my-8 animate-bounce">
+            <Trophy size={80} className={isUserChampion ? "text-yellow-400" : "text-secondary"} />
          </div>
 
          <div className="space-y-2 mb-8">
-            <p className="text-sm font-bold tracking-widest uppercase text-secondary">Campeão Baiano 2026</p>
-            <h1 className="text-4xl font-black text-white">{champion.name}</h1>
-            <div className={`inline-block px-3 py-1 rounded-full text-xs font-bold border mt-2 ${isUserChampion ? 'bg-yellow-500/20 border-yellow-500/50 text-yellow-400' : 'bg-surface border-white/10 text-secondary'}`}>
-               {champion.points} Pontos
+            <p className="text-sm font-bold tracking-widest uppercase text-secondary">Temporada Finalizada</p>
+            <h1 className="text-4xl font-black text-white">{champion.name} Campeão!</h1>
+         </div>
+
+         {/* Resumo da Temporada */}
+         <div className="w-full max-w-sm space-y-4 mb-10">
+            <div className="bg-surface/50 border border-white/10 rounded-3xl p-6 space-y-6">
+               <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-emerald-400">
+                     <ArrowUpCircle size={16} />
+                     <span className="text-[10px] font-black uppercase tracking-widest">Subiram para a Série A</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                     {promoted.map(t => (
+                        <div key={t.id} className="bg-background/50 p-3 rounded-xl border border-emerald-500/20 text-xs font-bold truncate">
+                           {t.name}
+                        </div>
+                     ))}
+                  </div>
+               </div>
+
+               <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-rose-400">
+                     <ArrowDownCircle size={16} />
+                     <span className="text-[10px] font-black uppercase tracking-widest">Caíram para a Série B</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                     {relegated.map(t => (
+                        <div key={t.id} className="bg-background/50 p-3 rounded-xl border border-rose-500/20 text-xs font-bold truncate">
+                           {t.name}
+                        </div>
+                     ))}
+                  </div>
+               </div>
+            </div>
+
+            <div className="bg-primary/10 border border-primary/20 rounded-2xl p-4">
+               <p className="text-[10px] text-primary font-bold leading-relaxed">
+                  {userTeam.division === 1 && relegated.some(r => r.id === userTeam.id) 
+                    ? "Sinto muito! Seu time não aguentou a pressão da elite e foi rebaixado." 
+                    : userTeam.division === 2 && promoted.some(p => p.id === userTeam.id)
+                    ? "PARABÉNS! Você conquistou o acesso e jogará contra os grandes no próximo ano!"
+                    : "Objetivo cumprido. Seu time permanece na divisão atual para o próximo desafio."}
+               </p>
             </div>
          </div>
 
-         {isUserChampion ? (
-            <div className="max-w-xs bg-gradient-to-br from-yellow-500/10 to-transparent border border-yellow-500/20 rounded-2xl p-6 mb-8">
-               <h2 className="text-xl font-bold text-yellow-100 mb-2">Parabéns, Treinador!</h2>
-               <p className="text-sm text-yellow-200/80 leading-relaxed">
-                  Sua liderança trouxe a glória para o {userTeam.name}. A torcida está em festa e seu nome está gravado na história!
-               </p>
-            </div>
-         ) : (
-            <div className="max-w-xs bg-surface border border-white/5 rounded-2xl p-6 mb-8">
-               <h2 className="text-xl font-bold text-white mb-2">Fim de Temporada</h2>
-               <p className="text-sm text-secondary leading-relaxed">
-                  Não foi dessa vez. O título ficou com o {champion.name}, mas a diretoria confia no seu trabalho para o próximo ano.
-               </p>
-            </div>
-         )}
-
-         <div className="flex flex-col w-full max-w-xs gap-3">
+         <div className="flex flex-col w-full max-w-xs gap-3 pb-12">
             <button 
                onClick={onNewSeason}
-               className="w-full py-4 px-6 bg-primary hover:bg-primary/90 text-white font-bold rounded-xl shadow-lg shadow-primary/20 flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
+               className="w-full py-5 bg-primary hover:bg-primary/90 text-white font-black rounded-2xl shadow-xl flex items-center justify-center gap-3 active:scale-95 transition-all"
             >
                <RotateCcw size={20} />
-               <span>Nova Temporada</span>
+               <span>INICIAR PRÓXIMA TEMPORADA</span>
             </button>
             <button 
                onClick={onQuit}
-               className="w-full py-4 px-6 bg-transparent border border-white/10 text-secondary hover:text-white font-bold rounded-xl flex items-center justify-center gap-2 active:scale-[0.98] transition-all"
+               className="text-secondary font-bold text-sm uppercase tracking-widest p-4"
             >
-               <span>Sair para o Menu</span>
+               Sair para o Menu
             </button>
          </div>
-
       </main>
     </div>
   );
