@@ -48,4 +48,22 @@ export interface Match {
   events: MatchEvent[];
 }
 
-export type ScreenState = 'SPLASH' | 'TEAM_SELECT' | 'DASHBOARD' | 'SQUAD' | 'MATCH' | 'MARKET';
+export interface Fixture {
+  round: number;
+  homeTeamId: string;
+  awayTeamId: string;
+  homeScore?: number;
+  awayScore?: number;
+  played: boolean;
+}
+
+export interface MatchResult {
+  round: number;
+  homeTeamName: string;
+  awayTeamName: string;
+  homeScore: number;
+  awayScore: number;
+  isUserMatch: boolean;
+}
+
+export type ScreenState = 'SPLASH' | 'TEAM_SELECT' | 'DASHBOARD' | 'SQUAD' | 'MATCH' | 'MARKET' | 'FINANCE' | 'CALENDAR' | 'LEAGUE' | 'NEWS' | 'SETTINGS' | 'CHAMPION' | 'GAME_OVER';

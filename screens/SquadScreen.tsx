@@ -9,12 +9,12 @@ interface Props {
 }
 
 const POS_COLORS = {
-  'GOL': 'text-yellow-500 bg-yellow-500/10',
-  'ZAG': 'text-blue-500 bg-blue-500/10',
-  'LAT': 'text-blue-400 bg-blue-400/10',
-  'VOL': 'text-green-500 bg-green-500/10',
-  'MEI': 'text-green-400 bg-green-400/10',
-  'ATA': 'text-red-500 bg-red-500/10',
+  'GOL': 'text-yellow-500 bg-yellow-500/10 border-yellow-500/20',
+  'ZAG': 'text-blue-500 bg-blue-500/10 border-blue-500/20',
+  'LAT': 'text-blue-400 bg-blue-400/10 border-blue-400/20',
+  'VOL': 'text-green-500 bg-green-500/10 border-green-500/20',
+  'MEI': 'text-green-400 bg-green-400/10 border-green-400/20',
+  'ATA': 'text-red-500 bg-red-500/10 border-red-500/20',
 };
 
 export default function SquadScreen({ team, onBack }: Props) {
@@ -31,6 +31,12 @@ export default function SquadScreen({ team, onBack }: Props) {
 
   const avgOverall = Math.round(team.roster.reduce((acc, p) => acc + p.overall, 0) / team.roster.length);
   const avgAge = (team.roster.reduce((acc, p) => acc + p.age, 0) / team.roster.length).toFixed(1);
+
+  const getInitials = (name: string) => {
+    const parts = name.split(' ');
+    if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`;
+    return name.slice(0, 2).toUpperCase();
+  };
 
   return (
     <div className="flex flex-col h-screen bg-background text-white">
@@ -98,12 +104,12 @@ export default function SquadScreen({ team, onBack }: Props) {
       <div className="flex-1 overflow-y-auto px-4 pb-20 space-y-2 no-scrollbar">
         {filteredPlayers.map((player, idx) => (
           <div key={player.id} className="group flex items-center bg-surface hover:bg-surface/80 rounded-xl p-3 border border-white/5 transition-all active:scale-[0.99]">
-            {/* Position */}
-            <div className="flex flex-col items-center justify-center w-10 mr-3 border-r border-white/5 pr-3">
-              <span className={clsx("text-[10px] font-black px-1.5 py-0.5 rounded", POS_COLORS[player.position])}>
-                {player.position}
-              </span>
-              <span className="text-xs font-bold text-secondary mt-1">#{Math.floor(Math.random() * 99) + 1}</span>
+            {/* Position & Avatar */}
+            <div className="flex items-center gap-3 w-16 mr-2">
+              <div className={clsx("w-8 h-8 rounded-full flex items-center justify-center border font-bold text-[10px]", POS_COLORS[player.position])}>
+                 {getInitials(player.name)}
+              </div>
+              <span className="text-[10px] font-black text-secondary">{player.position}</span>
             </div>
 
             {/* Info */}

@@ -1,8 +1,8 @@
-import { Team, Player, Match } from './types';
+import { Team, Player, Fixture } from './types';
 
 // Helper to generate random players
-const firstNames = ['Lucas', 'Matheus', 'Gabriel', 'Pedro', 'João', 'Felipe', 'Rafael', 'Daniel', 'Bruno', 'Thiago', 'Marcos', 'André', 'Luiz', 'Gustavo', 'Eduardo', 'Caio', 'Enzo', 'Arthur'];
-const lastNames = ['Silva', 'Santos', 'Oliveira', 'Souza', 'Rodrigues', 'Ferreira', 'Almeida', 'Pereira', 'Lima', 'Gomes', 'Costa', 'Martins', 'Araújo', 'Barbosa', 'Ramos'];
+const firstNames = ['Lucas', 'Matheus', 'Gabriel', 'Pedro', 'João', 'Felipe', 'Rafael', 'Daniel', 'Bruno', 'Thiago', 'Marcos', 'André', 'Luiz', 'Gustavo', 'Eduardo', 'Caio', 'Enzo', 'Arthur', 'Diego', 'Victor', 'Ruan', 'Igor'];
+const lastNames = ['Silva', 'Santos', 'Oliveira', 'Souza', 'Rodrigues', 'Ferreira', 'Almeida', 'Pereira', 'Lima', 'Gomes', 'Costa', 'Martins', 'Araújo', 'Barbosa', 'Ramos', 'Jesus', 'Alves', 'Rocha', 'Nascimento'];
 
 const generatePlayer = (position: Player['position'], baseRating: number): Player => {
   const isProspect = Math.random() > 0.8;
@@ -42,6 +42,47 @@ const generateRoster = (teamRating: number): Player[] => {
   return roster.sort((a, b) => b.overall - a.overall);
 };
 
+export const generateSchedule = (teams: Team[]): Fixture[] => {
+  const fixtures: Fixture[] = [];
+  const teamIds = teams.map(t => t.id);
+  const numberOfTeams = teamIds.length;
+  const rounds = (numberOfTeams - 1) * 2; // Double round robin
+  const matchesPerRound = numberOfTeams / 2;
+
+  // Simple Round Robin Algorithm
+  let rotation = [...teamIds];
+  
+  // First Half of Season
+  for (let r = 0; r < numberOfTeams - 1; r++) {
+    for (let i = 0; i < matchesPerRound; i++) {
+      const home = rotation[i];
+      const away = rotation[numberOfTeams - 1 - i];
+      fixtures.push({
+        round: r + 1,
+        homeTeamId: home,
+        awayTeamId: away,
+        played: false
+      });
+    }
+    // Rotate array, keeping first element fixed
+    const last = rotation.pop()!;
+    rotation.splice(1, 0, last);
+  }
+
+  // Second Half (Reverse fixtures)
+  const firstHalfFixtures = [...fixtures];
+  firstHalfFixtures.forEach(match => {
+    fixtures.push({
+      round: match.round + (numberOfTeams - 1),
+      homeTeamId: match.awayTeamId,
+      awayTeamId: match.homeTeamId,
+      played: false
+    });
+  });
+
+  return fixtures.sort((a, b) => a.round - b.round);
+};
+
 export const INITIAL_TEAMS: Team[] = [
   {
     id: 'bahia',
@@ -50,22 +91,34 @@ export const INITIAL_TEAMS: Team[] = [
     city: 'Salvador, BA',
     logoColor1: 'from-blue-600',
     logoColor2: 'to-red-600',
-    attack: 89,
-    defense: 87,
+    attack: 88,
+    defense: 86,
     roster: [],
-    played: 11, won: 10, drawn: 2, lost: 0, gf: 28, ga: 10, points: 32 // Mock current standing
+    played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, points: 0
   },
   {
     id: 'vitoria',
-    name: 'Vitória',
+    name: 'EC Vitória',
     shortName: 'VIT',
     city: 'Salvador, BA',
     logoColor1: 'from-red-600',
     logoColor2: 'to-black',
-    attack: 85,
-    defense: 86,
+    attack: 86,
+    defense: 85,
     roster: [],
-    played: 11, won: 7, drawn: 3, lost: 1, gf: 22, ga: 12, points: 24
+    played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, points: 0
+  },
+  {
+    id: 'bahia_feira',
+    name: 'Bahia de Feira',
+    shortName: 'BAF',
+    city: 'Feira de Santana, BA',
+    logoColor1: 'from-red-600',
+    logoColor2: 'to-blue-800',
+    attack: 76,
+    defense: 75,
+    roster: [],
+    played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, points: 0
   },
   {
     id: 'jacuipense',
@@ -73,72 +126,84 @@ export const INITIAL_TEAMS: Team[] = [
     shortName: 'JAC',
     city: 'Riachão do Jacuípe, BA',
     logoColor1: 'from-red-800',
-    logoColor2: 'to-red-900',
-    attack: 70,
-    defense: 74,
+    logoColor2: 'to-red-950',
+    attack: 74,
+    defense: 73,
     roster: [],
-    played: 11, won: 6, drawn: 4, lost: 1, gf: 18, ga: 13, points: 22
+    played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, points: 0
   },
   {
-    id: 'bahia_feira',
-    name: 'Bahia de Feira',
-    shortName: 'BAF',
-    city: 'Feira de Santana, BA',
-    logoColor1: 'from-blue-400',
-    logoColor2: 'to-blue-600',
-    attack: 75,
+    id: 'atletico_ba',
+    name: 'Atlético (BA)',
+    shortName: 'ATL',
+    city: 'Alagoinhas, BA',
+    logoColor1: 'from-red-600',
+    logoColor2: 'to-black',
+    attack: 73,
     defense: 72,
     roster: [],
-    played: 11, won: 5, drawn: 3, lost: 3, gf: 15, ga: 15, points: 18
+    played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, points: 0
   },
   {
     id: 'barcelona_ba',
-    name: 'Barcelona-BA',
+    name: 'Barcelona BA',
     shortName: 'BCA',
     city: 'Ilhéus, BA',
-    logoColor1: 'from-yellow-500',
-    logoColor2: 'to-red-500',
-    attack: 72,
+    logoColor1: 'from-blue-700',
+    logoColor2: 'to-red-700',
+    attack: 71,
     defense: 70,
     roster: [],
-    played: 11, won: 5, drawn: 5, lost: 1, gf: 14, ga: 12, points: 20
+    played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, points: 0
   },
   {
     id: 'juazeirense',
     name: 'Juazeirense',
     shortName: 'JUA',
     city: 'Juazeiro, BA',
-    logoColor1: 'from-green-600',
-    logoColor2: 'to-red-500',
-    attack: 71,
+    logoColor1: 'from-yellow-400',
+    logoColor2: 'to-red-600',
+    attack: 72,
+    defense: 71,
+    roster: [],
+    played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, points: 0
+  },
+  {
+    id: 'jequie',
+    name: 'Jequié',
+    shortName: 'ADJ',
+    city: 'Jequié, BA',
+    logoColor1: 'from-blue-500',
+    logoColor2: 'to-yellow-400',
+    attack: 70,
     defense: 69,
     roster: [],
-    played: 11, won: 4, drawn: 4, lost: 3, gf: 13, ga: 14, points: 16
+    played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, points: 0
   },
   {
-    id: 'atletico_ba',
-    name: 'Atlético-BA',
-    shortName: 'ATL',
-    city: 'Alagoinhas, BA',
-    logoColor1: 'from-red-600',
-    logoColor2: 'to-black',
-    attack: 68,
-    defense: 70,
-    roster: [],
-    played: 11, won: 4, drawn: 3, lost: 4, gf: 12, ga: 15, points: 15
-  },
-  {
-    id: 'itabuna',
-    name: 'Itabuna',
-    shortName: 'ITA',
-    city: 'Itabuna, BA',
-    logoColor1: 'from-blue-800',
+    id: 'galicia',
+    name: 'Galícia',
+    shortName: 'GAL',
+    city: 'Salvador, BA',
+    logoColor1: 'from-blue-600',
     logoColor2: 'to-white',
-    attack: 65,
+    attack: 69,
     defense: 68,
     roster: [],
-    played: 11, won: 2, drawn: 2, lost: 7, gf: 8, ga: 20, points: 8
+    played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, points: 0
   },
+  {
+    id: 'porto_ba',
+    name: 'Porto Sport Club',
+    shortName: 'PSC',
+    city: 'Porto Seguro, BA',
+    logoColor1: 'from-gray-500',
+    logoColor2: 'to-gray-800',
+    attack: 67,
+    defense: 67,
+    roster: [],
+    played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, points: 0
+  }
 ];
 
 // Hydrate Rosters

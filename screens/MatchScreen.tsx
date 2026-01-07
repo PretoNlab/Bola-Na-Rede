@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Team, MatchEvent } from '../types';
-import { ArrowLeft, Play, LayoutDashboard, Clock, StopCircle } from 'lucide-react';
+import { Play, LayoutDashboard, Clock, Zap, FastForward } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface Props {
@@ -10,19 +10,47 @@ interface Props {
   onFinish: (homeScore: number, awayScore: number) => void;
 }
 
+const GOAL_PHRASES = [
+   "GOL!",
+   "GOLAÇO!",
+   "GOOOL!",
+   "TÁ NA REDE!",
+   "OLHA O GOL!"
+];
+
+const EVENT_PHRASES = [
+   "Chute perigoso para fora",
+   "Defesa espetacular do goleiro",
+   "Bola na trave!",
+   "Dominio de jogo no meio campo",
+   "Contra-ataque rápido",
+   "Falta perigosa na entrada da área",
+   "Escanteio cobrado com perigo"
+];
+
 export default function MatchScreen({ homeTeam, awayTeam, round, onFinish }: Props) {
   const [minute, setMinute] = useState(0);
   const [homeScore, setHomeScore] = useState(0);
   const [awayScore, setAwayScore] = useState(0);
   const [events, setEvents] = useState<MatchEvent[]>([]);
   const [isFinished, setIsFinished] = useState(false);
+  const [speed, setSpeed] = useState<1 | 10 | 100>(10); // Start fast (10x)
   
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+     if (scrollRef.current) {
+        scrollRef.current.scrollTop = 0;
+     }
+  }, [events]);
+
+  useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
     
-    if (minute < 95) {
+    // Determine interval speed based on speed state
+    const intervalTime = speed === 1 ? 150 : (speed === 10 ? 30 : 5);
+
+    if (minute < 95 && !isFinished) {
       interval = setInterval(() => {
         setMinute(m => {
           const nextMinute = m + 1;
@@ -30,22 +58,29 @@ export default function MatchScreen({ homeTeam, awayTeam, round, onFinish }: Pro
           // Simulation Logic per minute
           const roll = Math.random();
           
-          // Goal Chance (Simple model: Attack rating influence)
-          const homeAttackPower = homeTeam.attack / 2000; // ~0.045
-          const awayAttackPower = awayTeam.attack / 2000;
+          const homeAttackPower = (homeTeam.attack / 3000) * 1.1; 
+          const awayAttackPower = awayTeam.attack / 3000;
           
           if (roll < homeAttackPower) {
+             const phrase = GOAL_PHRASES[Math.floor(Math.random() * GOAL_PHRASES.length)];
              setHomeScore(s => s + 1);
-             addEvent(nextMinute, 'goal', homeTeam.id, "GOL! " + homeTeam.name);
-             toast.success(`GOL! ${homeTeam.name}`, { icon: '⚽' });
+             addEvent(nextMinute, 'goal', homeTeam.id, `${phrase} ${homeTeam.name}`);
+             if(speed === 1) toast.success(`GOL! ${homeTeam.name}`, { icon: '⚽' });
           } else if (roll < homeAttackPower + awayAttackPower) {
+             const phrase = GOAL_PHRASES[Math.floor(Math.random() * GOAL_PHRASES.length)];
              setAwayScore(s => s + 1);
-             addEvent(nextMinute, 'goal', awayTeam.id, "GOL! " + awayTeam.name);
-             toast.success(`GOL! ${awayTeam.name}`, { icon: '⚽', style: { border: '1px solid #ef4444' } });
-          } else if (roll > 0.99) {
+             addEvent(nextMinute, 'goal', awayTeam.id, `${phrase} ${awayTeam.name}`);
+             if(speed === 1) toast.success(`GOL! ${awayTeam.name}`, { icon: '⚽', style: { border: '1px solid #ef4444' } });
+          } else if (roll > 0.992) {
              // Card
              const isHome = Math.random() > 0.5;
-             addEvent(nextMinute, 'card_yellow', isHome ? homeTeam.id : awayTeam.id, "Cartão Amarelo");
+             const teamId = isHome ? homeTeam.id : awayTeam.id;
+             addEvent(nextMinute, 'card_yellow', teamId, "Cartão Amarelo");
+          } else if (roll > 0.95 && roll < 0.96) {
+             // Flavor event
+             const flavor = EVENT_PHRASES[Math.floor(Math.random() * EVENT_PHRASES.length)];
+             const isHome = Math.random() > 0.5;
+             addEvent(nextMinute, 'whistle', isHome ? homeTeam.id : awayTeam.id, flavor);
           }
 
           if (nextMinute === 45) {
@@ -58,11 +93,11 @@ export default function MatchScreen({ homeTeam, awayTeam, round, onFinish }: Pro
           
           return nextMinute;
         });
-      }, 100); // Speed of simulation
+      }, intervalTime);
     }
 
     return () => clearInterval(interval);
-  }, [minute, homeTeam, awayTeam]);
+  }, [minute, homeTeam, awayTeam, speed, isFinished]);
 
   const addEvent = (minute: number, type: MatchEvent['type'], teamId: string | undefined, description: string) => {
     setEvents(prev => [{ minute, type, teamId, description }, ...prev]);
@@ -76,7 +111,16 @@ export default function MatchScreen({ homeTeam, awayTeam, round, onFinish }: Pro
         <h2 className="flex-1 text-center text-xs font-bold uppercase tracking-widest opacity-80">
            Campeonato Baiano • Rodada {round}
         </h2>
-        <div className="w-10"></div>
+        <div className="w-10 flex justify-end">
+           <button 
+             onClick={() => setSpeed(s => s === 1 ? 10 : (s === 10 ? 100 : 1))}
+             className="p-2 bg-surface rounded-full active:scale-95 transition-transform"
+           >
+              {speed === 1 && <Play size={16} />}
+              {speed === 10 && <FastForward size={16} className="text-primary" />}
+              {speed === 100 && <Zap size={16} className="text-yellow-400" />}
+           </button>
+        </div>
       </div>
 
       {/* Scoreboard Area */}
@@ -103,7 +147,7 @@ export default function MatchScreen({ homeTeam, awayTeam, round, onFinish }: Pro
                <div className={`w-20 h-20 rounded-full bg-gradient-to-br ${homeTeam.logoColor1} ${homeTeam.logoColor2} flex items-center justify-center shadow-2xl ring-4 ring-surface/50`}>
                   <span className="text-xl font-black">{homeTeam.shortName}</span>
                </div>
-               <span className="text-lg font-bold">{homeTeam.name}</span>
+               <span className="text-lg font-bold text-center leading-tight">{homeTeam.name}</span>
             </div>
 
             <div className="flex flex-col items-center">
@@ -116,7 +160,7 @@ export default function MatchScreen({ homeTeam, awayTeam, round, onFinish }: Pro
                <div className={`w-20 h-20 rounded-full bg-gradient-to-br ${awayTeam.logoColor1} ${awayTeam.logoColor2} flex items-center justify-center shadow-2xl ring-4 ring-surface/50`}>
                   <span className="text-xl font-black">{awayTeam.shortName}</span>
                </div>
-               <span className="text-lg font-bold">{awayTeam.name}</span>
+               <span className="text-lg font-bold text-center leading-tight">{awayTeam.name}</span>
             </div>
          </div>
       </div>

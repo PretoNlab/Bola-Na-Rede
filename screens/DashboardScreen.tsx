@@ -10,10 +10,19 @@ interface Props {
   funds: number;
   onOpenSquad: () => void;
   onOpenMarket: () => void;
+  onOpenFinance: () => void;
+  onOpenCalendar: () => void;
+  onOpenLeague: () => void;
+  onOpenNews: () => void;
+  onOpenSettings: () => void;
   onSimulate: () => void;
 }
 
-export default function DashboardScreen({ team, nextOpponent, standings, round, funds, onOpenSquad, onOpenMarket, onSimulate }: Props) {
+export default function DashboardScreen({ 
+  team, nextOpponent, standings, round, funds, 
+  onOpenSquad, onOpenMarket, onOpenFinance, onOpenCalendar, 
+  onOpenLeague, onOpenNews, onOpenSettings, onSimulate 
+}: Props) {
   const userRank = standings.findIndex(t => t.id === team.id) + 1;
   const nextOpponentRank = standings.findIndex(t => t.id === nextOpponent.id) + 1;
 
@@ -126,7 +135,7 @@ export default function DashboardScreen({ team, nextOpponent, standings, round, 
                  </div>
               </button>
 
-              <button className="flex items-center gap-3 p-4 rounded-xl bg-surface border border-white/5 hover:bg-surface/80 active:scale-95 transition-all">
+              <button onClick={onOpenFinance} className="flex items-center gap-3 p-4 rounded-xl bg-surface border border-white/5 hover:bg-surface/80 active:scale-95 transition-all">
                  <div className="bg-amber-500/10 text-amber-400 p-2 rounded-lg">
                     <Wallet size={20} />
                  </div>
@@ -136,7 +145,7 @@ export default function DashboardScreen({ team, nextOpponent, standings, round, 
                  </div>
               </button>
 
-              <button className="flex items-center gap-3 p-4 rounded-xl bg-surface border border-white/5 hover:bg-surface/80 active:scale-95 transition-all">
+              <button onClick={onOpenCalendar} className="flex items-center gap-3 p-4 rounded-xl bg-surface border border-white/5 hover:bg-surface/80 active:scale-95 transition-all">
                  <div className="bg-purple-500/10 text-purple-400 p-2 rounded-lg">
                     <Calendar size={20} />
                  </div>
@@ -152,7 +161,7 @@ export default function DashboardScreen({ team, nextOpponent, standings, round, 
         <section>
           <div className="flex items-center justify-between mb-3 px-1">
              <h2 className="text-xs font-bold uppercase tracking-wider text-secondary">Classificação</h2>
-             <button className="text-[10px] font-bold text-primary hover:text-primary/80">Ver Completa</button>
+             <button onClick={onOpenLeague} className="text-[10px] font-bold text-primary hover:text-primary/80">Ver Completa</button>
           </div>
           
           <div className="bg-surface rounded-xl border border-white/5 overflow-hidden">
@@ -229,15 +238,15 @@ export default function DashboardScreen({ team, nextOpponent, standings, round, 
                <Users size={22} />
                <span className="text-[9px] font-bold">Elenco</span>
             </button>
-            <button className="flex flex-col items-center justify-center w-full h-full text-secondary hover:text-white gap-1 transition-colors">
+            <button onClick={onOpenLeague} className="flex flex-col items-center justify-center w-full h-full text-secondary hover:text-white gap-1 transition-colors">
                <Trophy size={22} />
                <span className="text-[9px] font-bold">Liga</span>
             </button>
-            <button className="flex flex-col items-center justify-center w-full h-full text-secondary hover:text-white gap-1 transition-colors">
+            <button onClick={onOpenNews} className="flex flex-col items-center justify-center w-full h-full text-secondary hover:text-white gap-1 transition-colors">
                <Newspaper size={22} />
                <span className="text-[9px] font-bold">News</span>
             </button>
-            <button className="flex flex-col items-center justify-center w-full h-full text-secondary hover:text-white gap-1 transition-colors">
+            <button onClick={onOpenSettings} className="flex flex-col items-center justify-center w-full h-full text-secondary hover:text-white gap-1 transition-colors">
                <Settings size={22} />
                <span className="text-[9px] font-bold">Ajustes</span>
             </button>
