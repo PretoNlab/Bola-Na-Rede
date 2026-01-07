@@ -6,11 +6,11 @@ export interface Player {
   age: number;
   overall: number;
   status: 'fit' | 'injured' | 'tired' | 'suspended';
-  form?: number; // 0-100
+  form?: number;
   evolution?: number;
-  marketValue: number; // Value in currency
-  goals: number; // Added: career goals in current season
-  assists: number; // Added: career assists in current season
+  marketValue: number;
+  goals: number;
+  assists: number;
 }
 
 export type FormationType = '4-4-2' | '4-3-3' | '3-5-2' | '5-4-1' | '4-5-1' | '5-3-2';
@@ -19,14 +19,14 @@ export type PlayingStyle = 'Ultra-Defensivo' | 'Defensivo' | 'Equilibrado' | 'Of
 export interface Team {
   id: string;
   name: string;
-  shortName: string; // 3 letters
+  shortName: string;
   city: string;
   logoColor1: string;
   logoColor2: string;
   attack: number;
   defense: number;
   roster: Player[];
-  lineup: string[]; // Array of player IDs (11 starters)
+  lineup: string[];
   formation: FormationType;
   style: PlayingStyle;
   played: number;
@@ -36,8 +36,11 @@ export interface Team {
   gf: number;
   ga: number;
   points: number;
-  moral: number; // 0-100
-  division: 1 | 2; // Added to distinguish divisions
+  moral: number;
+  division: 1 | 2;
+  prestige?: number;
+  trophies?: number;
+  ticketPrice?: number;
 }
 
 export interface MatchResult {
@@ -47,14 +50,13 @@ export interface MatchResult {
   homeScore: number;
   awayScore: number;
   isUserMatch: boolean;
-  scorers?: { teamId: string, playerId: string }[]; // Optional: track scorers
+  revenue?: number;
 }
 
 export interface MatchEvent {
   minute: number;
-  type: 'goal' | 'whistle' | 'card' | 'commentary';
+  type: 'goal' | 'whistle' | 'message';
   teamId?: string;
-  playerId?: string;
   description: string;
 }
 

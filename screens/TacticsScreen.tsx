@@ -112,7 +112,8 @@ export default function TacticsScreen({ team, onBack, onSave }: Props) {
                             </div>
                             <div className="flex flex-col items-start">
                                <span className={clsx("text-sm font-bold", isStarter ? "text-white" : "text-gray-400")}>{player.name}</span>
-                               <span className="text-[10px] text-secondary">OVR {player.overall} • 2{player.age%10} anos</span>
+                               {/* Fixed age display logic */}
+                               <span className="text-[10px] text-secondary">OVR {player.overall} • {player.age} anos</span>
                             </div>
                          </div>
                          <div className={clsx(

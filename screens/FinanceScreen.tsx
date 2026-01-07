@@ -1,25 +1,28 @@
+
 import React from 'react';
 import { Team } from '../types';
-import { ArrowLeft, Wallet, TrendingUp, TrendingDown, DollarSign, Building } from 'lucide-react';
+import { ArrowLeft, Wallet, TrendingUp, TrendingDown, DollarSign, Building, Users } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 interface Props {
   team: Team;
   funds: number;
+  ticketPrice: number;
+  onUpdateTicketPrice: (price: number) => void;
   onBack: () => void;
   onLoan: (amount: number) => void;
 }
 
-export default function FinanceScreen({ team, funds, onBack, onLoan }: Props) {
+export default function FinanceScreen({ team, funds, ticketPrice, onUpdateTicketPrice, onBack, onLoan }: Props) {
   const formatMoney = (val: number) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(val);
   };
 
   const totalValue = team.roster.reduce((acc, p) => acc + p.marketValue, 0);
-  const wageBill = Math.round(totalValue * 0.005); // Estimated wage per match
+  const wageBill = (team.roster.length * 1500); 
   
   const handleRequestLoan = () => {
-     if (funds > 5000000) {
+     if (funds > 1000000) {
         toast.error("O banco recusou o empréstimo (Saldo alto).");
         return;
      }
@@ -40,7 +43,7 @@ export default function FinanceScreen({ team, funds, onBack, onLoan }: Props) {
         </div>
       </header>
 
-      <main className="p-4 space-y-6 overflow-y-auto pb-safe">
+      <main className="p-4 space-y-6 overflow-y-auto pb-safe no-scrollbar">
          {/* Balance Card */}
          <div className="bg-gradient-to-br from-surface to-background border border-white/5 rounded-2xl p-6 shadow-xl relative overflow-hidden">
             <div className="absolute top-0 right-0 p-4 opacity-10">
@@ -55,10 +58,40 @@ export default function FinanceScreen({ team, funds, onBack, onLoan }: Props) {
                   <span className="text-emerald-400 font-bold">{formatMoney(totalValue)}</span>
                </div>
                <div className="flex flex-col">
-                  <span className="text-[10px] text-secondary font-bold uppercase">Folha Salarial</span>
+                  <span className="text-[10px] text-secondary font-bold uppercase">Gasto com Salários</span>
                   <span className="text-rose-400 font-bold">{formatMoney(wageBill)} / jogo</span>
                </div>
             </div>
+         </div>
+
+         {/* Ticket Price Control */}
+         <div className="bg-surface rounded-2xl p-6 border border-white/5 space-y-4">
+            <div className="flex items-center justify-between">
+               <div className="flex items-center gap-2">
+                  <Users size={18} className="text-primary" />
+                  <h3 className="text-sm font-bold uppercase">Preço do Ingresso</h3>
+               </div>
+               <span className="text-xl font-black text-primary">{formatMoney(ticketPrice)}</span>
+            </div>
+            
+            <input 
+               type="range" 
+               min="10" 
+               max="200" 
+               step="5"
+               value={ticketPrice}
+               onChange={(e) => onUpdateTicketPrice(parseInt(e.target.value))}
+               className="w-full h-2 bg-background rounded-lg appearance-none cursor-pointer accent-primary"
+            />
+            
+            <div className="flex justify-between text-[10px] font-bold text-secondary uppercase tracking-widest">
+               <span>Público Alto / Renda Baixa</span>
+               <span>Renda Alta / Público Baixo</span>
+            </div>
+            
+            <p className="text-[10px] text-center text-secondary leading-relaxed pt-2">
+               Dica: O público diminui conforme o preço sobe. Encontre o equilíbrio para maximizar sua receita.
+            </p>
          </div>
 
          {/* Actions */}
@@ -75,51 +108,11 @@ export default function FinanceScreen({ team, funds, onBack, onLoan }: Props) {
                    </div>
                    <div className="flex flex-col items-start">
                       <span className="font-bold text-sm">Solicitar Empréstimo</span>
-                      <span className="text-[10px] text-secondary">Taxa de juros: 5% p.r.</span>
+                      <span className="text-[10px] text-secondary">Apenas para emergências</span>
                    </div>
                 </div>
                 <div className="bg-primary px-3 py-1 rounded text-xs font-bold text-white">+ 500k</div>
              </button>
-
-             <button className="w-full flex items-center justify-between p-4 bg-surface rounded-xl border border-white/5 opacity-75 cursor-not-allowed">
-                <div className="flex items-center gap-3">
-                   <div className="bg-emerald-500/20 p-2 rounded-lg text-emerald-500">
-                      <DollarSign size={20} />
-                   </div>
-                   <div className="flex flex-col items-start">
-                      <span className="font-bold text-sm">Preço dos Ingressos</span>
-                      <span className="text-[10px] text-secondary">Auto: R$ 50,00</span>
-                   </div>
-                </div>
-             </button>
-         </div>
-
-         {/* Transactions Mock */}
-         <div className="space-y-3">
-             <h3 className="text-xs font-bold text-secondary uppercase tracking-widest px-1">Últimas Movimentações</h3>
-             <div className="bg-surface rounded-xl border border-white/5 divide-y divide-white/5">
-                <div className="flex items-center justify-between p-3">
-                   <div className="flex items-center gap-2">
-                      <div className="bg-rose-500/10 p-1.5 rounded text-rose-500"><TrendingDown size={14} /></div>
-                      <span className="text-xs font-medium">Salários (Elenco)</span>
-                   </div>
-                   <span className="text-xs font-bold text-rose-400">-{formatMoney(wageBill)}</span>
-                </div>
-                <div className="flex items-center justify-between p-3">
-                   <div className="flex items-center gap-2">
-                      <div className="bg-emerald-500/10 p-1.5 rounded text-emerald-500"><TrendingUp size={14} /></div>
-                      <span className="text-xs font-medium">Bilheteria</span>
-                   </div>
-                   <span className="text-xs font-bold text-emerald-400">+{formatMoney(Math.floor(Math.random() * 50000) + 20000)}</span>
-                </div>
-                <div className="flex items-center justify-between p-3">
-                   <div className="flex items-center gap-2">
-                      <div className="bg-emerald-500/10 p-1.5 rounded text-emerald-500"><TrendingUp size={14} /></div>
-                      <span className="text-xs font-medium">Patrocínio Master</span>
-                   </div>
-                   <span className="text-xs font-bold text-emerald-400">+{formatMoney(15000)}</span>
-                </div>
-             </div>
          </div>
       </main>
     </div>

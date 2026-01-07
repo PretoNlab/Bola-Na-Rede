@@ -120,7 +120,8 @@ export default function SquadScreen({ team, onBack }: Props) {
                 {player.status === 'injured' && <Activity size={12} className="text-red-500" />}
               </div>
               <div className="flex items-center gap-3 mt-1 text-xs text-secondary font-medium">
-                 <span className="flex items-center gap-1">2{player.age % 10} anos</span>
+                 {/* Fixed age display logic */}
+                 <span className="flex items-center gap-1">{player.age} anos</span>
                  {player.evolution && player.evolution > 0 && (
                     <span className="text-emerald-400 flex items-center gap-0.5">
                        <Target size={10} /> +{player.evolution} Evo

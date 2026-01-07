@@ -12,9 +12,6 @@ interface Props {
   onFinish: (homeScore: number, awayScore: number, scorers: {scorerId: string}[]) => void;
 }
 
-const FORMATIONS: FormationType[] = ['4-4-2', '4-3-3', '3-5-2', '5-4-1', '4-5-1', '5-3-2'];
-const STYLES: PlayingStyle[] = ['Ultra-Defensivo', 'Defensivo', 'Equilibrado', 'Ofensivo', 'Tudo-ou-Nada'];
-
 export default function MatchScreen({ homeTeam, awayTeam, round, onFinish }: Props) {
   const [minute, setMinute] = useState(0);
   const [homeScore, setHomeScore] = useState(0);
@@ -26,10 +23,15 @@ export default function MatchScreen({ homeTeam, awayTeam, round, onFinish }: Pro
   const [matchScorers, setMatchScorers] = useState<{scorerId: string}[]>([]);
   
   const [currentStyle, setCurrentStyle] = useState<PlayingStyle>(homeTeam.style);
-  const [showTactics, setShowTactics] = useState(false);
   const [activeDecision, setActiveDecision] = useState<{title: string, options: {label: string, action: () => void}[]} | null>(null);
 
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  const triggerVibration = (pattern: number | number[]) => {
+    if ('vibrate' in navigator) {
+      navigator.vibrate(pattern);
+    }
+  };
 
   const getRandomScorer = (team: Team) => {
     const starters = team.roster.filter(p => team.lineup.includes(p.id));
@@ -77,11 +79,13 @@ export default function MatchScreen({ homeTeam, awayTeam, round, onFinish }: Pro
              setHomeScore(s => s + 1);
              setMatchScorers(prev => [...prev, { scorerId: scorer.id }]);
              addEvent(nextMinute, 'goal', homeTeam.id, `GOL DO ${homeTeam.name.toUpperCase()}! Marcou ${scorer.name}!`);
+             triggerVibration([100, 50, 100]); // Vibração dupla para gol
           } else if (roll < homeGoalProb + awayGoalProb) {
              const scorer = getRandomScorer(awayTeam);
              setAwayScore(s => s + 1);
              setMatchScorers(prev => [...prev, { scorerId: scorer.id }]);
              addEvent(nextMinute, 'goal', awayTeam.id, `GOL DO ${awayTeam.name.toUpperCase()}! Marcou ${scorer.name}!`);
+             triggerVibration(200); // Vibração simples para gol adversário
           }
 
           if (nextMinute === 45 || nextMinute === 75) {
@@ -91,6 +95,7 @@ export default function MatchScreen({ homeTeam, awayTeam, round, onFinish }: Pro
           if (nextMinute >= 90 + Math.floor(Math.random() * 5)) {
              setIsFinished(true);
              addEvent(nextMinute, 'whistle', undefined, "Fim de Jogo!");
+             triggerVibration([50, 50, 50, 50, 200]); // Padrão de apito final
              return nextMinute;
           }
           return nextMinute;
@@ -106,6 +111,7 @@ export default function MatchScreen({ homeTeam, awayTeam, round, onFinish }: Pro
 
   const triggerDecision = (min: number) => {
      setIsPaused(true);
+     triggerVibration(50);
      const options = [
         { label: "Manter postura", action: () => { setIsPaused(false); setActiveDecision(null); } },
         { label: "Mudar para Ofensivo", action: () => { setCurrentStyle('Ofensivo'); setIsPaused(false); setActiveDecision(null); toast.success("Atacar!"); } },
@@ -173,7 +179,7 @@ export default function MatchScreen({ homeTeam, awayTeam, round, onFinish }: Pro
 
       {!isFinished ? (
          <div className="fixed bottom-0 left-0 w-full p-4 grid grid-cols-2 gap-3 bg-surface/90 backdrop-blur-xl border-t border-white/5 z-30">
-            <button onClick={() => { setIsPaused(true); setShowTactics(true); }} className="flex items-center justify-center gap-2 bg-background/50 py-4 rounded-xl text-xs font-bold border border-white/10">
+            <button onClick={() => { setIsPaused(true); }} className="flex items-center justify-center gap-2 bg-background/50 py-4 rounded-xl text-xs font-bold border border-white/10">
                <Target size={16} /> Estilo: {currentStyle}
             </button>
             <button onClick={() => toast("Substituições em breve!")} className="flex items-center justify-center gap-2 bg-background/50 py-4 rounded-xl text-xs font-bold border border-white/10">
