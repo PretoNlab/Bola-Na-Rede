@@ -3,7 +3,7 @@ import { CapacitorConfig } from '@capacitor/cli';
 const config: CapacitorConfig = {
   appId: 'com.bolanarede.manager',
   appName: 'Bolanarede Manager',
-  webDir: 'dist',
+  webDir: '.', // Alterado para ponto para ler da raiz se você não usar uma pasta dist
   server: {
     androidScheme: 'https'
   },

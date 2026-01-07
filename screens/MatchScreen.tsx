@@ -1,32 +1,19 @@
+
 import React, { useState, useEffect, useRef } from 'react';
-import { Team, MatchEvent } from '../types';
-import { Play, LayoutDashboard, Clock, Zap, FastForward } from 'lucide-react';
+import { Team, MatchEvent, Player, FormationType, PlayingStyle } from '../types';
+import { Play, Pause, LayoutDashboard, Clock, Zap, FastForward, Target, UserPlus, AlertTriangle } from 'lucide-react';
 import toast from 'react-hot-toast';
+import clsx from 'clsx';
 
 interface Props {
   homeTeam: Team;
   awayTeam: Team;
   round: number;
-  onFinish: (homeScore: number, awayScore: number) => void;
+  onFinish: (homeScore: number, awayScore: number, scorers: {scorerId: string}[]) => void;
 }
 
-const GOAL_PHRASES = [
-   "GOL!",
-   "GOLAÇO!",
-   "GOOOL!",
-   "TÁ NA REDE!",
-   "OLHA O GOL!"
-];
-
-const EVENT_PHRASES = [
-   "Chute perigoso para fora",
-   "Defesa espetacular do goleiro",
-   "Bola na trave!",
-   "Dominio de jogo no meio campo",
-   "Contra-ataque rápido",
-   "Falta perigosa na entrada da área",
-   "Escanteio cobrado com perigo"
-];
+const FORMATIONS: FormationType[] = ['4-4-2', '4-3-3', '3-5-2', '5-4-1', '4-5-1', '5-3-2'];
+const STYLES: PlayingStyle[] = ['Ultra-Defensivo', 'Defensivo', 'Equilibrado', 'Ofensivo', 'Tudo-ou-Nada'];
 
 export default function MatchScreen({ homeTeam, awayTeam, round, onFinish }: Props) {
   const [minute, setMinute] = useState(0);
@@ -34,191 +21,190 @@ export default function MatchScreen({ homeTeam, awayTeam, round, onFinish }: Pro
   const [awayScore, setAwayScore] = useState(0);
   const [events, setEvents] = useState<MatchEvent[]>([]);
   const [isFinished, setIsFinished] = useState(false);
-  const [speed, setSpeed] = useState<1 | 10 | 100>(10); // Start fast (10x)
+  const [isPaused, setIsPaused] = useState(false);
+  const [speed, setSpeed] = useState<1 | 10 | 100>(10);
+  const [matchScorers, setMatchScorers] = useState<{scorerId: string}[]>([]);
   
+  const [currentStyle, setCurrentStyle] = useState<PlayingStyle>(homeTeam.style);
+  const [showTactics, setShowTactics] = useState(false);
+  const [activeDecision, setActiveDecision] = useState<{title: string, options: {label: string, action: () => void}[]} | null>(null);
+
   const scrollRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-     if (scrollRef.current) {
-        scrollRef.current.scrollTop = 0;
+  const getRandomScorer = (team: Team) => {
+    const starters = team.roster.filter(p => team.lineup.includes(p.id));
+    const attackers = starters.filter(p => p.position === 'ATA' || p.position === 'MEI');
+    const pool = attackers.length > 0 ? attackers : starters;
+    return pool[Math.floor(Math.random() * pool.length)];
+  };
+
+  const calculatePower = (team: Team, style: PlayingStyle) => {
+     const starters = team.roster.filter(p => team.lineup.includes(p.id));
+     const avgOvr = starters.length > 0 
+        ? starters.reduce((acc, p) => acc + p.overall, 0) / starters.length 
+        : (team.attack + team.defense) / 2;
+
+     let attMod = 1.0;
+     let defMod = 1.0;
+
+     switch(style) {
+        case 'Ultra-Defensivo': attMod = 0.5; defMod = 1.6; break;
+        case 'Defensivo': attMod = 0.8; defMod = 1.3; break;
+        case 'Ofensivo': attMod = 1.3; defMod = 0.7; break;
+        case 'Tudo-ou-Nada': attMod = 1.8; defMod = 0.4; break;
      }
-  }, [events]);
+
+     return { att: (avgOvr / 3000) * attMod, def: (avgOvr / 3000) * defMod };
+  };
 
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
-    
-    // Determine interval speed based on speed state
-    const intervalTime = speed === 1 ? 150 : (speed === 10 ? 30 : 5);
-
-    if (minute < 95 && !isFinished) {
+    if (minute < 95 && !isFinished && !isPaused && !activeDecision) {
+      const intervalTime = speed === 1 ? 500 : (speed === 10 ? 100 : 20);
       interval = setInterval(() => {
         setMinute(m => {
           const nextMinute = m + 1;
-          
-          // Simulation Logic per minute
           const roll = Math.random();
           
-          const homeAttackPower = (homeTeam.attack / 3000) * 1.1; 
-          const awayAttackPower = awayTeam.attack / 3000;
+          const hPower = calculatePower(homeTeam, currentStyle);
+          const aPower = calculatePower(awayTeam, awayTeam.style);
+
+          const homeGoalProb = hPower.att * (1 / aPower.def) * 0.05;
+          const awayGoalProb = aPower.att * (1 / hPower.def) * 0.05;
           
-          if (roll < homeAttackPower) {
-             const phrase = GOAL_PHRASES[Math.floor(Math.random() * GOAL_PHRASES.length)];
+          if (roll < homeGoalProb) {
+             const scorer = getRandomScorer(homeTeam);
              setHomeScore(s => s + 1);
-             addEvent(nextMinute, 'goal', homeTeam.id, `${phrase} ${homeTeam.name}`);
-             if(speed === 1) toast.success(`GOL! ${homeTeam.name}`, { icon: '⚽' });
-          } else if (roll < homeAttackPower + awayAttackPower) {
-             const phrase = GOAL_PHRASES[Math.floor(Math.random() * GOAL_PHRASES.length)];
+             setMatchScorers(prev => [...prev, { scorerId: scorer.id }]);
+             addEvent(nextMinute, 'goal', homeTeam.id, `GOL DO ${homeTeam.name.toUpperCase()}! Marcou ${scorer.name}!`);
+          } else if (roll < homeGoalProb + awayGoalProb) {
+             const scorer = getRandomScorer(awayTeam);
              setAwayScore(s => s + 1);
-             addEvent(nextMinute, 'goal', awayTeam.id, `${phrase} ${awayTeam.name}`);
-             if(speed === 1) toast.success(`GOL! ${awayTeam.name}`, { icon: '⚽', style: { border: '1px solid #ef4444' } });
-          } else if (roll > 0.992) {
-             // Card
-             const isHome = Math.random() > 0.5;
-             const teamId = isHome ? homeTeam.id : awayTeam.id;
-             addEvent(nextMinute, 'card_yellow', teamId, "Cartão Amarelo");
-          } else if (roll > 0.95 && roll < 0.96) {
-             // Flavor event
-             const flavor = EVENT_PHRASES[Math.floor(Math.random() * EVENT_PHRASES.length)];
-             const isHome = Math.random() > 0.5;
-             addEvent(nextMinute, 'whistle', isHome ? homeTeam.id : awayTeam.id, flavor);
+             setMatchScorers(prev => [...prev, { scorerId: scorer.id }]);
+             addEvent(nextMinute, 'goal', awayTeam.id, `GOL DO ${awayTeam.name.toUpperCase()}! Marcou ${scorer.name}!`);
           }
 
-          if (nextMinute === 45) {
-             addEvent(45, 'whistle', undefined, "Fim do 1º Tempo");
+          if (nextMinute === 45 || nextMinute === 75) {
+             triggerDecision(nextMinute);
           }
-          if (nextMinute === 90) {
-             addEvent(90, 'whistle', undefined, "Fim de Jogo");
+
+          if (nextMinute >= 90 + Math.floor(Math.random() * 5)) {
              setIsFinished(true);
+             addEvent(nextMinute, 'whistle', undefined, "Fim de Jogo!");
+             return nextMinute;
           }
-          
           return nextMinute;
         });
       }, intervalTime);
     }
-
     return () => clearInterval(interval);
-  }, [minute, homeTeam, awayTeam, speed, isFinished]);
+  }, [minute, isFinished, isPaused, speed, currentStyle, activeDecision]);
 
   const addEvent = (minute: number, type: MatchEvent['type'], teamId: string | undefined, description: string) => {
     setEvents(prev => [{ minute, type, teamId, description }, ...prev]);
   };
 
+  const triggerDecision = (min: number) => {
+     setIsPaused(true);
+     const options = [
+        { label: "Manter postura", action: () => { setIsPaused(false); setActiveDecision(null); } },
+        { label: "Mudar para Ofensivo", action: () => { setCurrentStyle('Ofensivo'); setIsPaused(false); setActiveDecision(null); toast.success("Atacar!"); } },
+        { label: "Mudar para Defensivo", action: () => { setCurrentStyle('Defensivo'); setIsPaused(false); setActiveDecision(null); toast.success("Recuar!"); } }
+     ];
+     setActiveDecision({
+        title: `Decisão de Campo (${min}')`,
+        options: options
+     });
+  };
+
   return (
-    <div className="flex flex-col h-screen bg-background text-white font-sans">
-      {/* Top Bar */}
-      <div className="sticky top-0 z-50 flex items-center bg-background/95 backdrop-blur-sm p-4 border-b border-white/5">
-        <div className="w-10"></div>
-        <h2 className="flex-1 text-center text-xs font-bold uppercase tracking-widest opacity-80">
-           Campeonato Baiano • Rodada {round}
-        </h2>
-        <div className="w-10 flex justify-end">
-           <button 
-             onClick={() => setSpeed(s => s === 1 ? 10 : (s === 10 ? 100 : 1))}
-             className="p-2 bg-surface rounded-full active:scale-95 transition-transform"
-           >
-              {speed === 1 && <Play size={16} />}
-              {speed === 10 && <FastForward size={16} className="text-primary" />}
-              {speed === 100 && <Zap size={16} className="text-yellow-400" />}
+    <div className="flex flex-col h-screen bg-background text-white relative overflow-hidden">
+      <header className="flex items-center bg-surface/80 backdrop-blur-md p-4 border-b border-white/5 z-20">
+        <button onClick={() => setIsPaused(!isPaused)} className="p-2 bg-background/50 rounded-lg">
+           {isPaused ? <Play size={18} className="text-emerald-500" /> : <Pause size={18} />}
+        </button>
+        <h2 className="flex-1 text-center text-[10px] font-black uppercase tracking-[0.2em] opacity-60">Rodada {round}</h2>
+        <div className="flex gap-2">
+           <button onClick={() => setSpeed(s => s === 1 ? 10 : (s === 10 ? 100 : 1))} className="p-2 bg-background/50 rounded-lg text-primary text-xs font-bold">
+              {speed}x
            </button>
         </div>
-      </div>
+      </header>
 
-      {/* Scoreboard Area */}
-      <div className="relative w-full flex flex-col items-center pt-8 pb-10 bg-gradient-to-b from-surface to-background">
-         {/* Live Status Chip */}
-         <div className="mb-6 flex items-center gap-2 px-4 py-1 rounded-full bg-primary/10 border border-primary/20">
-            {!isFinished ? (
-              <>
-                 <span className="relative flex h-2 w-2">
-                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
-                   <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
-                 </span>
-                 <span className="text-primary text-[10px] font-black uppercase tracking-widest">
-                   {minute < 45 ? '1º Tempo' : '2º Tempo'} • {minute}'
-                 </span>
-              </>
-            ) : (
-               <span className="text-secondary text-[10px] font-black uppercase tracking-widest">Partida Encerrada</span>
-            )}
-         </div>
-
-         <div className="grid grid-cols-[1fr_auto_1fr] w-full max-w-md px-6 items-center gap-4">
-            <div className="flex flex-col items-center gap-2 animate-in slide-in-from-left duration-700">
-               <div className={`w-20 h-20 rounded-full bg-gradient-to-br ${homeTeam.logoColor1} ${homeTeam.logoColor2} flex items-center justify-center shadow-2xl ring-4 ring-surface/50`}>
-                  <span className="text-xl font-black">{homeTeam.shortName}</span>
+      <div className="pt-6 pb-8 bg-gradient-to-b from-surface to-background px-6">
+         <div className="flex items-center justify-between max-w-md mx-auto">
+            <div className="flex flex-col items-center gap-2">
+               <div className={`w-14 h-14 rounded-full bg-gradient-to-br ${homeTeam.logoColor1} ${homeTeam.logoColor2} flex items-center justify-center font-black shadow-xl`}>
+                  {homeTeam.shortName}
                </div>
-               <span className="text-lg font-bold text-center leading-tight">{homeTeam.name}</span>
+               <span className="text-[10px] font-bold text-center w-20 truncate uppercase">{homeTeam.name}</span>
             </div>
-
+            
             <div className="flex flex-col items-center">
-               <span className="text-6xl font-black tracking-tighter tabular-nums leading-none">
-                  {homeScore} - {awayScore}
-               </span>
+               <span className="text-xs font-black text-primary mb-1">{minute}'</span>
+               <span className="text-5xl font-black tracking-tighter tabular-nums">{homeScore} - {awayScore}</span>
             </div>
 
-            <div className="flex flex-col items-center gap-2 animate-in slide-in-from-right duration-700">
-               <div className={`w-20 h-20 rounded-full bg-gradient-to-br ${awayTeam.logoColor1} ${awayTeam.logoColor2} flex items-center justify-center shadow-2xl ring-4 ring-surface/50`}>
-                  <span className="text-xl font-black">{awayTeam.shortName}</span>
+            <div className="flex flex-col items-center gap-2">
+               <div className={`w-14 h-14 rounded-full bg-gradient-to-br ${awayTeam.logoColor1} ${awayTeam.logoColor2} flex items-center justify-center font-black shadow-xl opacity-80`}>
+                  {awayTeam.shortName}
                </div>
-               <span className="text-lg font-bold text-center leading-tight">{awayTeam.name}</span>
+               <span className="text-[10px] font-bold text-center w-20 truncate uppercase">{awayTeam.name}</span>
             </div>
          </div>
       </div>
 
-      {/* Timeline */}
-      <div className="flex-1 w-full bg-background px-4 pb-24 relative overflow-y-auto" ref={scrollRef}>
-         <div className="max-w-md mx-auto relative pt-4">
-            <div className="absolute left-[19px] top-4 bottom-0 w-[2px] bg-white/5 z-0"></div>
-            
-            {events.map((ev, i) => (
-               <div key={i} className="relative grid grid-cols-[40px_1fr] gap-x-4 mb-4 group animate-fade-in-up">
-                  <div className="relative flex flex-col items-center z-10">
-                     <div className={`flex items-center justify-center w-10 h-10 rounded-full border-2 border-background shadow-lg
-                        ${ev.type === 'goal' ? 'bg-surface ring-1 ring-primary' : 
-                          ev.type === 'card_yellow' ? 'bg-surface ring-1 ring-yellow-500' : 'bg-surface ring-1 ring-secondary'}
-                     `}>
-                        {ev.type === 'goal' && <span className="text-lg">⚽</span>}
-                        {ev.type === 'card_yellow' && <div className="w-3 h-4 bg-yellow-500 rounded-sm"></div>}
-                        {ev.type === 'whistle' && <Clock size={16} className="text-secondary" />}
-                     </div>
-                  </div>
-                  
-                  <div className="flex flex-col py-2 border-b border-white/5 pb-4">
-                     <div className="flex justify-between items-baseline mb-1">
-                        <span className={`text-base font-bold ${ev.type === 'goal' ? 'text-white' : 'text-secondary'}`}>
-                           {ev.description}
-                        </span>
-                        <span className="text-primary text-sm font-mono font-bold">{ev.minute}'</span>
-                     </div>
-                     {ev.teamId && (
-                       <span className="text-xs text-secondary font-medium">
-                          {ev.teamId === homeTeam.id ? homeTeam.name : awayTeam.name}
-                       </span>
-                     )}
-                  </div>
+      <div className="flex-1 overflow-y-auto px-6 pb-24 pt-4 space-y-4 no-scrollbar" ref={scrollRef}>
+         {events.map((ev, i) => (
+            <div key={i} className={clsx(
+               "flex gap-4 items-start p-3 rounded-xl animate-in slide-in-from-left duration-300",
+               ev.type === 'goal' ? "bg-primary/10 border border-primary/20" : "bg-surface/30 border border-white/5"
+            )}>
+               <div className="w-8 h-8 rounded-lg bg-background flex items-center justify-center shrink-0">
+                  {ev.type === 'goal' ? '⚽' : ev.type === 'whistle' ? '🏁' : '💬'}
                </div>
-            ))}
-            
-            {events.length === 0 && (
-               <div className="flex items-center gap-4 text-secondary opacity-50 p-4">
-                  <div className="w-10 flex justify-center"><Clock size={20} /></div>
-                  <span className="text-sm font-bold uppercase tracking-widest">Início de Partida</span>
+               <div className="flex flex-col">
+                  <span className="text-xs font-bold text-white leading-tight">{ev.description}</span>
+                  <span className="text-[9px] text-secondary font-black uppercase mt-1">{ev.minute}'</span>
                </div>
-            )}
-         </div>
+            </div>
+         ))}
       </div>
 
-      {/* Footer Action */}
-      {isFinished && (
-        <div className="fixed bottom-0 w-full bg-background/95 backdrop-blur-md border-t border-white/5 p-4 z-50 animate-in slide-in-from-bottom">
-           <button 
-             onClick={() => onFinish(homeScore, awayScore)}
-             className="w-full bg-primary hover:bg-primary/90 text-white font-bold text-base py-4 px-6 rounded-xl shadow-xl shadow-primary/20 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
-           >
-              <LayoutDashboard size={20} />
-              Voltar ao Dashboard
-           </button>
-        </div>
+      {!isFinished ? (
+         <div className="fixed bottom-0 left-0 w-full p-4 grid grid-cols-2 gap-3 bg-surface/90 backdrop-blur-xl border-t border-white/5 z-30">
+            <button onClick={() => { setIsPaused(true); setShowTactics(true); }} className="flex items-center justify-center gap-2 bg-background/50 py-4 rounded-xl text-xs font-bold border border-white/10">
+               <Target size={16} /> Estilo: {currentStyle}
+            </button>
+            <button onClick={() => toast("Substituições em breve!")} className="flex items-center justify-center gap-2 bg-background/50 py-4 rounded-xl text-xs font-bold border border-white/10">
+               <UserPlus size={16} /> Substituir
+            </button>
+         </div>
+      ) : (
+         <div className="fixed bottom-0 left-0 w-full p-6 bg-background/95 backdrop-blur-xl border-t border-white/5 z-50 animate-in slide-in-from-bottom">
+            <button 
+               onClick={() => onFinish(homeScore, awayScore, matchScorers)}
+               className="w-full bg-primary py-5 rounded-2xl font-black uppercase tracking-widest shadow-2xl shadow-primary/20"
+            >
+               Encerrar Partida
+            </button>
+         </div>
+      )}
+
+      {activeDecision && (
+         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-background/90 backdrop-blur-sm">
+            <div className="w-full max-w-sm bg-surface border border-white/10 rounded-3xl p-6 shadow-2xl">
+               <AlertTriangle className="text-amber-500 w-10 h-10 mb-4 mx-auto" />
+               <h3 className="text-lg font-black text-center mb-6">{activeDecision.title}</h3>
+               <div className="space-y-3">
+                  {activeDecision.options.map((opt, i) => (
+                     <button key={i} onClick={opt.action} className="w-full py-4 px-6 bg-background/50 border border-white/5 rounded-xl text-sm font-bold text-left hover:bg-primary/20 transition-all">
+                        {opt.label}
+                     </button>
+                  ))}
+               </div>
+            </div>
+         </div>
       )}
     </div>
   );

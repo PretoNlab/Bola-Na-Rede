@@ -1,26 +1,30 @@
+
 {
   "name": "bolanarede-manager",
-  "private": true,
-  "version": "0.0.0",
-  "type": "module",
+  "version": "1.0.0",
+  "description": "Football Manager game based on Elifoot",
+  "main": "index.html",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "start": "npx serve .",
+    "build": "echo 'No build step needed for this simple structure'",
+    "copy": "npx cap copy",
+    "sync": "npx cap sync",
+    "open:android": "npx cap open android"
   },
   "dependencies": {
-    "lucide-react": "^0.562.0",
-    "react": "^19.2.3",
-    "react-dom": "^19.2.3",
-    "react-hot-toast": "^2.6.0",
-    "clsx": "^2.1.1",
-    "@capacitor/cli": "^8.0.0",
-    "@supabase/supabase-js": "2"
+    "@capacitor/android": "^6.0.0",
+    "@capacitor/cli": "^6.0.0",
+    "@capacitor/core": "^6.0.0",
+    "lucide-react": "^0.462.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-hot-toast": "^2.4.1",
+    "clsx": "^2.1.1"
   },
   "devDependencies": {
-    "@types/node": "^22.14.0",
-    "@vitejs/plugin-react": "^5.0.0",
-    "typescript": "~5.8.2",
-    "vite": "^6.2.0"
-  }
+    "typescript": "^5.0.0",
+    "serve": "^14.2.0"
+  },
+  "author": "Bolanarede Developer",
+  "license": "MIT"
 }

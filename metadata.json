@@ -1,5 +1,6 @@
 {
   "name": "Bolanarede Manager",
   "description": "A high-fidelity football management simulation game inspired by Elifoot. Manage your team, simulate matches, and conquer the championship.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [],
+  "orientation": "portrait"
 }

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Team } from '../types';
 import { ArrowLeft, Trophy } from 'lucide-react';
 import clsx from 'clsx';
@@ -10,6 +10,12 @@ interface Props {
 }
 
 export default function LeagueScreen({ teams, userTeamId, onBack }: Props) {
+  const [activeDiv, setActiveDiv] = useState<1 | 2>(1);
+  
+  const filteredTeams = [...teams]
+    .filter(t => t.division === activeDiv)
+    .sort((a, b) => b.points - a.points || (b.gf - b.ga) - (a.gf - a.ga));
+
   return (
     <div className="flex flex-col h-screen bg-background text-white">
       <header className="sticky top-0 z-40 bg-background/95 backdrop-blur-md border-b border-white/5">
@@ -17,7 +23,7 @@ export default function LeagueScreen({ teams, userTeamId, onBack }: Props) {
           <button onClick={onBack} className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-surface transition-colors">
             <ArrowLeft className="text-white" size={20} />
           </button>
-          <h1 className="text-lg font-bold">Campeonato Baiano</h1>
+          <h1 className="text-lg font-bold">Campeonato Baiano 2026</h1>
           <div className="w-10"></div>
         </div>
       </header>
@@ -25,7 +31,20 @@ export default function LeagueScreen({ teams, userTeamId, onBack }: Props) {
       <main className="flex-1 overflow-y-auto no-scrollbar">
          <div className="p-4 bg-gradient-to-b from-primary/20 to-background flex flex-col items-center justify-center mb-2">
             <Trophy className="text-primary w-12 h-12 mb-2" />
-            <h2 className="text-xl font-bold">Tabela 2026</h2>
+            <div className="flex bg-surface p-1 rounded-xl border border-white/5">
+               <button 
+                  onClick={() => setActiveDiv(1)}
+                  className={clsx("px-4 py-2 rounded-lg text-xs font-black transition-all", activeDiv === 1 ? "bg-primary text-white" : "text-secondary")}
+               >
+                  SÉRIE A
+               </button>
+               <button 
+                  onClick={() => setActiveDiv(2)}
+                  className={clsx("px-4 py-2 rounded-lg text-xs font-black transition-all", activeDiv === 2 ? "bg-primary text-white" : "text-secondary")}
+               >
+                  SÉRIE B
+               </button>
+            </div>
          </div>
 
          <div className="overflow-x-auto">
@@ -43,13 +62,17 @@ export default function LeagueScreen({ teams, userTeamId, onBack }: Props) {
                  </tr>
               </thead>
               <tbody className="divide-y divide-white/5">
-                {teams.map((t, index) => {
+                {filteredTeams.map((t, index) => {
                   const rank = index + 1;
                   const isUser = t.id === userTeamId;
                   
                   let rankColor = 'border-transparent';
-                  if (rank <= 4) rankColor = 'border-emerald-500'; // G4
-                  if (rank > teams.length - 2) rankColor = 'border-red-500'; // Z2
+                  if (activeDiv === 1) {
+                    if (rank <= 4) rankColor = 'border-emerald-500'; // G4
+                    if (rank > filteredTeams.length - 2) rankColor = 'border-red-500'; // Z2 (Rebaixamento)
+                  } else {
+                    if (rank <= 2) rankColor = 'border-emerald-500'; // Acesso
+                  }
 
                   return (
                     <tr key={t.id} className={clsx("transition-colors", isUser ? "bg-primary/10" : "hover:bg-white/5")}>
@@ -89,11 +112,13 @@ export default function LeagueScreen({ teams, userTeamId, onBack }: Props) {
 
          <div className="p-4 flex gap-4 text-[10px] font-bold uppercase text-secondary justify-center mt-4">
             <div className="flex items-center gap-2">
-               <div className="w-2 h-2 rounded-full bg-emerald-500"></div> Zona de Classificação
+               <div className="w-2 h-2 rounded-full bg-emerald-500"></div> {activeDiv === 1 ? 'Classificação' : 'Acesso'}
             </div>
-            <div className="flex items-center gap-2">
-               <div className="w-2 h-2 rounded-full bg-red-500"></div> Rebaixamento
-            </div>
+            {activeDiv === 1 && (
+              <div className="flex items-center gap-2">
+                 <div className="w-2 h-2 rounded-full bg-red-500"></div> Rebaixamento
+              </div>
+            )}
          </div>
       </main>
     </div>
