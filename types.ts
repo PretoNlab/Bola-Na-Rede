@@ -8,6 +8,7 @@ export interface Player {
   energy: number;
   status: 'fit' | 'injured' | 'suspended';
   yellowCards: number;
+  redCards: number; // Novo campo
   isSuspended?: boolean;
   marketValue: number;
   goals: number;
@@ -94,7 +95,6 @@ export interface MatchEvent {
   description: string;
 }
 
-// Added missing TransferOffer interface
 export interface TransferOffer {
   id: string;
   offeringTeamId: string;
@@ -105,7 +105,6 @@ export interface TransferOffer {
   round: number;
 }
 
-// Added missing TransferLog interface
 export interface TransferLog {
   id: string;
   round: number;

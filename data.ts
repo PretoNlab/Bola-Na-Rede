@@ -23,6 +23,7 @@ const generatePlayer = (position: Player['position'], baseRating: number): Playe
     energy: 100,
     status: 'fit',
     yellowCards: 0,
+    redCards: 0,
     marketValue: Math.round(baseValue / 1000) * 1000,
     goals: 0,
     assists: 0,
